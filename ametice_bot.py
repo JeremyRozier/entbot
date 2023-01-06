@@ -5,7 +5,7 @@ import json
 from bs4 import BeautifulSoup
 from time import time
 import os
-from constants import *
+from shared_code.constants import *
 
 
 class AmeticeBot:
@@ -18,7 +18,6 @@ class AmeticeBot:
         self.password = password
         self.dic_course_topics = dict()
         self.sess_key = str()
-
         self.login_payload = {
             "username": f"{self.username}",
             "password": f"{self.password}",
@@ -57,7 +56,11 @@ class AmeticeBot:
             page = await self.session.get(url)
         except aiohttp.ClientConnectionError:
             return
-        binary_content = await page.read()
+        try:
+            binary_content = await page.read()
+        except aiohttp.client_exceptions.ClientPayloadError:
+            print(filename)
+            return
         await self._save_files(
             binary_content, str(page.url), content_type, folder_path, filename
         )

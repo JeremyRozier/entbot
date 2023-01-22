@@ -310,5 +310,5 @@ class AmeticeBot:
 
 
 if __name__ == "__main__":
-    bot = AmeticeBot("r21203054", "Lemegasupermec5-6-7")
+    bot = AmeticeBot("username", "password")
     asyncio.run(bot.download_all_documents())

@@ -59,7 +59,6 @@ class AmeticeBot:
         try:
             binary_content = await page.read()
         except aiohttp.client_exceptions.ClientPayloadError:
-            print(filename)
             return
         await self._save_files(
             binary_content, str(page.url), content_type, folder_path, filename
@@ -95,7 +94,11 @@ class AmeticeBot:
         resp_login = await self.session.post(
             login_url, data=self.login_payload, headers=self.headers
         )
-        if resp_login.status == 401 or len(self.password) == 0:
+        if (
+            resp_login.status == 401
+            or len(self.password) == 0
+            or len(self.username) == 0
+        ):
             print("Le mot de passe ou l'identifiant est incorrect.")
             return False
         print("Connecté.")

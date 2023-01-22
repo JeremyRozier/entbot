@@ -1,4 +1,4 @@
-from shared_code.ametice_bot import AmeticeBot
+from ametice_bot import AmeticeBot
 import asyncio
 from getpass import getpass
 

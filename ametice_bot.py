@@ -5,7 +5,7 @@ import json
 from bs4 import BeautifulSoup
 from time import time
 import os
-from shared_code.constants import *
+from constants import *
 
 
 class AmeticeBot:
@@ -13,7 +13,7 @@ class AmeticeBot:
     It is meant to get all the files from all the courses
     of an account with its credentials."""
 
-    def __init__(self, username, password) -> None:
+    def __init__(self, username, password):
         self.username = username
         self.password = password
         self.dic_course_topics = dict()
@@ -65,15 +65,28 @@ class AmeticeBot:
             binary_content, str(page.url), content_type, folder_path, filename
         )
 
-    async def _post_content(self, url, payload) -> dict:
+    async def _fetch_content(self, url, payload) -> dict:
         request = await self.session.post(url, json=payload)
         info = json.loads(bytes.decode(await request.read()))[0]["data"]
         return info
 
-    async def _post_topics(self, url, payload, course_name) -> tuple[str, dict]:
-        info = await self._post_content(url, payload)
+    async def _fetch_topics(self, url, payload, course_name) -> tuple[str, dict]:
+        info = await self._fetch_content(url, payload)
         data = json.loads(info)
         return (course_name, data)
+
+    async def _fetch_module_html_content(self, filename, cmid) -> tuple[str, int, str]:
+        payload_module = [
+            {
+                "index": 0,
+                "methodname": "core_course_get_module",
+                "args": {"id": cmid},
+            }
+        ]
+        url = f"https://ametice.univ-amu.fr/lib/ajax/service.php?sesskey={self.sess_key}&info=core_course_get_module"
+        resp = await self.session.post(url, json=payload_module)
+        html_content = json.loads(bytes.decode(await resp.read()))[0]["data"]
+        return (filename, cmid, html_content)
 
     async def _login(self, login_url="https://ident.univ-amu.fr/cas/login") -> bool:
         """Method to log in with the
@@ -99,11 +112,25 @@ class AmeticeBot:
         sess_key = input_sess_key["value"]
         return sess_key
 
+    def _get_mod_type_from_soup(self, soup) -> str:
+        li_module = soup.find("li")
+        class_name = li_module["class"]
+        mod_type = class_name[2]
+        return mod_type
+
+    def _get_mod_folder_url_from_soup(self, soup) -> str:
+        list_form_module = soup.find_all("form")
+        if len(list_form_module) == 0:
+            return False
+        form_module = list_form_module[0]
+        url = form_module["action"]
+        return url
+
     async def _get_courses_info(self) -> dict:
         """Method to get the informations related
         to the courses the student follows."""
         url_get_courses = f"https://ametice.univ-amu.fr/lib/ajax/service.php?sesskey={self.sess_key}&info=core_course_get_enrolled_courses_by_timeline_classification"
-        courses_info = await self._post_content(url_get_courses, self.courses_payload)
+        courses_info = await self._fetch_content(url_get_courses, self.courses_payload)
         return courses_info
 
     async def _get_topics_info(self, courses_info) -> dict:
@@ -123,7 +150,7 @@ class AmeticeBot:
             ]
             list_tasks.append(
                 asyncio.create_task(
-                    self._post_topics(
+                    self._fetch_topics(
                         url_get_topics, topics_payload, current_course_name
                     )
                 )
@@ -178,27 +205,42 @@ class AmeticeBot:
                 dic_data = topic_info[1]
                 list_topics = dic_data["section"]
                 list_dic_cm = dic_data["cm"]
+                list_tasks = list()
                 for dic_topic in list_topics:
                     topic_name = dic_topic["title"]
                     self.dic_course_topics[course_name][topic_name] = []
                     list_cm_id = dic_topic["cmlist"]
                     nb_treated = 0
                     for dic_cm in list_dic_cm:
+                        if not dic_cm["accessvisible"]:
+                            continue
+
                         cm_id = dic_cm["id"]
                         if cm_id in list_cm_id:
                             filename = dic_cm["name"]
                             if "url" not in dic_cm:
+                                list_tasks.append(
+                                    asyncio.create_task(
+                                        self._fetch_module_html_content(filename, cm_id)
+                                    )
+                                )
+                                nb_treated += 1
+                                if nb_treated == len(list_cm_id):
+                                    break
                                 continue
                             file_url = dic_cm["url"]
                             is_url_not_treated = False
                             for re_name, re_url in DIC_NAME_REGEX.items():
-                                if re_name not in LIST_TREATED_TYPES and re.match(
-                                    re_url, file_url
+                                if (
+                                    re_name not in LIST_TREATED_TYPES
+                                    and re.match(re_url, file_url) is not None
                                 ):
                                     is_url_not_treated = True
+                                    break
 
                             if is_url_not_treated:
                                 continue
+
                             elif (
                                 re.match(DIC_NAME_REGEX["resource"], file_url)
                                 is not None
@@ -225,6 +267,24 @@ class AmeticeBot:
                             nb_treated += 1
                             if nb_treated == len(list_cm_id):
                                 break
+                    list_html_module = await asyncio.gather(*list_tasks)
+                    for filename, cm_id, html_module in list_html_module:
+                        soup = BeautifulSoup(html_module, features="html.parser")
+                        mod_type = self._get_mod_type_from_soup(soup)
+                        if mod_type == "folder":
+                            url = self._get_mod_folder_url_from_soup(soup)
+                            if not url:
+                                continue
+                            tuple_url = (
+                                f"{url}?id={cm_id}",
+                                "folder",
+                            )
+                            self.dic_course_topics[course_name][topic_name].append(
+                                {
+                                    "filename": filename,
+                                    "tuple_url": tuple_url,
+                                }
+                            )
 
             list_tasks = list()
             for course_name in self.dic_course_topics:
@@ -250,5 +310,5 @@ class AmeticeBot:
 
 
 if __name__ == "__main__":
-    bot = AmeticeBot("username", "password")
+    bot = AmeticeBot("r21203054", "Lemegasupermec5-6-7")
     asyncio.run(bot.download_all_documents())

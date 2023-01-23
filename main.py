@@ -1,3 +1,4 @@
+import check_module
 from ametice_bot import AmeticeBot
 import asyncio
 from getpass import getpass

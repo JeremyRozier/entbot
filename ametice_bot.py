@@ -90,8 +90,6 @@ class AmeticeBot:
         by ametice once connected."""
         resp_my = await self.session.get(URL_AMETICE)
         content = await resp_my.read()
-        with open("file.html", "wb") as file:
-            file.write(content)
         soup = BeautifulSoup(bytes.decode(content), features="html.parser")
         input_sess_key = soup.find("input", attrs={"name": "sesskey"})
         sess_key = input_sess_key["value"]

@@ -30,13 +30,3 @@ except ModuleNotFoundError:
     else:
         print("Abandon.")
         sys.exit()
-
-try:
-    import regex
-except ModuleNotFoundError:
-    q = input("regex est manquant, veux tu l'installer ? [y/n] : ")
-    if q.lower() == "y":
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "regex"])
-    else:
-        print("Abandon.")
-        sys.exit()

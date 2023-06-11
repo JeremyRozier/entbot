@@ -1,7 +1,7 @@
-import check_module
-from ametice_bot import AmeticeBot
 import asyncio
 from getpass import getpass
+import check_module
+from ametice_bot import AmeticeBot
 
 print(
     """\nCe programme permet de télécharger toutes les

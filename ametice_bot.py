@@ -17,8 +17,8 @@ class AmeticeBot:
     def __init__(self, username, password) -> None:
         self.username = username
         self.password = password
-        self.dic_course_topics = dict()
-        self.sess_key = str()
+        self.dic_course_topics = {}
+        self.sess_key = ""
         self.session = "aiohttp.ClientSession()"
 
         self.login_payload = {
@@ -45,6 +45,7 @@ class AmeticeBot:
 
         self.headers = {
             "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
+            "Connection": "keep-alive",
         }
 
     async def _get_content(self, name, url) -> tuple[str, str]:
@@ -76,10 +77,16 @@ class AmeticeBot:
 
     async def _login(self, login_url=URL_LOGIN) -> bool:
         """Method to login with the
-        credentials given in the class attributes"""
+        credentials given in the class attributes
+        - return True if login succeeded.
+        - return False if login failed."""
         print("\nConnexion...")
         resp_login = await self.session.post(login_url, data=self.login_payload)
-        if resp_login.status == 401:
+        if (
+            resp_login.status == 401
+            or len(self.password) == 0
+            or len(self.username) == 0
+        ):
             print("Le mot de passe ou l'identifiant est incorrect.")
             return False
         print("Connecté.")
@@ -106,7 +113,7 @@ class AmeticeBot:
         """Method to get the informations related
         to the topics of the courses the student follows."""
         url_get_topics = f"https://ametice.univ-amu.fr/lib/ajax/service.php?sesskey={self.sess_key}&info=core_courseformat_get_state"
-        list_tasks = list()
+        list_tasks = []
         for course_info in courses_info:
             current_course_name = course_info["fullname"]
             current_course_id = course_info["id"]
@@ -195,7 +202,7 @@ class AmeticeBot:
 
                             if is_url_not_treated:
                                 continue
-                            elif (
+                            if (
                                 re.match(DIC_NAME_REGEX["resource"], file_url)
                                 is not None
                             ):
@@ -222,7 +229,7 @@ class AmeticeBot:
                             if nb_treated == len(list_cm_id):
                                 break
 
-            list_tasks = list()
+            list_tasks = []
             for course_name in self.dic_course_topics:
                 for topic_name in self.dic_course_topics[course_name]:
                     for dic_file in self.dic_course_topics[course_name][topic_name]:

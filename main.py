@@ -6,7 +6,7 @@ from ametice_bot import AmeticeBot
 print(
     """\nCe programme permet de télécharger toutes les
 ressources disponibles sur ton compte Ametice. Tous les fichiers seront stockés dans le chemin : 
-'Fichiers Ametice/[annee_debut:annee_fin]/UE'.\n
+'Fichiers Ametice/[annee_debut:annee_fin]/UE/chapitres/fichiers'.\n
 Tous les dossiers seront automatiquement créés par le programme.\n"""
 )
 

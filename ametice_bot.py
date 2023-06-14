@@ -56,11 +56,26 @@ class AmeticeBot:
     async def _get_content_file_save(self, tuple_url, folder_path, filename):
         url = tuple_url[0]
         content_type = tuple_url[1]
-        try:
-            page = await self.session.get(url)
-        except aiohttp.ClientConnectionError:
-            return
-        binary_content = await page.read()
+
+        has_connection_error = True
+        while has_connection_error:
+            try:
+                page = await self.session.get(url)
+            except aiohttp.ClientConnectionError:
+                page = await self.session.get(url)
+                continue
+
+            has_connection_error = False
+
+        has_payload_error = True
+        while has_payload_error:
+            try:
+                binary_content = await page.read()
+            except aiohttp.client_exceptions.ClientPayloadError:
+                page = await self.session.get(url)
+                continue
+            has_payload_error = False
+
         await self._save_files(
             binary_content, str(page.url), content_type, folder_path, filename
         )

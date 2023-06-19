@@ -9,6 +9,7 @@ import aiofiles
 from bs4 import BeautifulSoup
 from constants import DIC_NAME_REGEX, URL_LOGIN, URL_AMETICE, LIST_NOT_TREATED_TYPES
 
+
 def get_valid_filename(filename):
     """
     Return the given string converted to a string that can be used for a clean
@@ -23,6 +24,7 @@ def get_valid_filename(filename):
         [c for c in valid_filename if not unicodedata.combining(c)]
     )
     return valid_filename
+
 
 class AmeticeBot:
     """This class is a bot for Ametice website.
@@ -268,9 +270,7 @@ class AmeticeBot:
                         valid_school_year = get_valid_filename(school_year)
                         valid_course_name = get_valid_filename(course_name)
                         valid_topic_name = get_valid_filename(topic_name)
-                        folder_path = (
-                            f"Fichiers_Ametice/{valid_school_year}/{valid_course_name}/{valid_topic_name}"
-                        )
+                        folder_path = f"Fichiers_Ametice/{valid_school_year}/{valid_course_name}/{valid_topic_name}"
                         list_tasks.append(
                             asyncio.create_task(
                                 self._get_content_file_save(

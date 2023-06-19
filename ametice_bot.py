@@ -1,5 +1,6 @@
 import asyncio
 import json
+import unicodedata
 from time import time
 import os
 import re
@@ -8,6 +9,20 @@ import aiofiles
 from bs4 import BeautifulSoup
 from constants import DIC_NAME_REGEX, URL_LOGIN, URL_AMETICE, LIST_NOT_TREATED_TYPES
 
+def get_valid_filename(filename):
+    """
+    Return the given string converted to a string that can be used for a clean
+    filename. Remove leading and trailing spaces; convert other spaces to
+    underscores; and remove anything that is not an alphanumeric, dash,
+    underscore, or dot.
+    """
+    valid_filename = str(filename).strip().replace(" ", "_")
+    valid_filename = re.sub(r"(?u)[^-\w.]", "", valid_filename)
+    valid_filename = unicodedata.normalize("NFKD", valid_filename)
+    valid_filename = "".join(
+        [c for c in valid_filename if not unicodedata.combining(c)]
+    )
+    return valid_filename
 
 class AmeticeBot:
     """This class is a bot for Ametice website.
@@ -249,17 +264,17 @@ class AmeticeBot:
                 for topic_name in self.dic_course_topics[course_name]:
                     for dic_file in self.dic_course_topics[course_name][topic_name]:
                         file_url = dic_file["tuple_url"]
-                        filename = dic_file["filename"]
-                        for char in filename:
-                            if char == "/":
-                                filename = filename.replace("/", "-")
+                        valid_filename = get_valid_filename(dic_file["filename"])
+                        valid_school_year = get_valid_filename(school_year)
+                        valid_course_name = get_valid_filename(course_name)
+                        valid_topic_name = get_valid_filename(topic_name)
                         folder_path = (
-                            f"Fichiers Ametice/{school_year}/{course_name}/{topic_name}"
+                            f"Fichiers_Ametice/{valid_school_year}/{valid_course_name}/{valid_topic_name}"
                         )
                         list_tasks.append(
                             asyncio.create_task(
                                 self._get_content_file_save(
-                                    file_url, folder_path, filename
+                                    file_url, folder_path, valid_filename
                                 )
                             )
                         )

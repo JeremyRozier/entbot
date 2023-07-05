@@ -4,10 +4,12 @@ import unicodedata
 from time import time
 import os
 import re
+from urllib.parse import urlparse
+from mimetypes import guess_extension, guess_type
 import aiohttp
 import aiofiles
 from bs4 import BeautifulSoup
-from constants import DIC_NAME_REGEX, URL_LOGIN, URL_AMETICE, LIST_NOT_TREATED_TYPES
+from constants import DIC_NAME_REGEX, URL_LOGIN, URL_AMETICE
 
 
 def get_valid_filename(filename):
@@ -24,6 +26,27 @@ def get_valid_filename(filename):
         [c for c in valid_filename if not unicodedata.combining(c)]
     )
     return valid_filename
+
+
+def get_nb_origin_same_filename(folder_path, filename):
+    """
+    Returns for a given filename the number of files
+    already saved which match with this pattern
+    rf"{filename}(_\d+)?" 
+    or 0 if there aren't any conflicts.
+    """
+    list_files = [
+        os.path.splitext(f)[0]
+        for f in os.listdir(folder_path)
+        if os.path.isfile(os.path.join(folder_path, f))
+    ]
+    list_same_file = [f for f in list_files if f == filename]
+    if len(list_same_file) == 0:
+        return 0
+
+    pattern = rf"{filename}(_\d+)?"
+    list_similar = [f for f in list_files if re.match(pattern, f)]
+    return len(list_similar)
 
 
 class AmeticeBot:
@@ -70,16 +93,19 @@ class AmeticeBot:
         content = await page.read()
         return (name, content)
 
-    async def _get_content_file_save(self, tuple_url, folder_path, filename):
-        url = tuple_url[0]
-        content_type = tuple_url[1]
+    async def _get_content_file_save(self, **dic_args):
+
+        file_url = dic_args["file_url"]
+        resource_type = dic_args["resource_type"]
+        folder_path = dic_args["folder_path"]
+        filename = dic_args["filename"]
 
         has_connection_error = True
         while has_connection_error:
             try:
-                page = await self.session.get(url)
+                page = await self.session.get(file_url)
             except aiohttp.ClientConnectionError:
-                page = await self.session.get(url)
+                page = await self.session.get(file_url)
                 continue
 
             has_connection_error = False
@@ -89,12 +115,17 @@ class AmeticeBot:
             try:
                 binary_content = await page.read()
             except aiohttp.client_exceptions.ClientPayloadError:
-                page = await self.session.get(url)
+                page = await self.session.get(file_url)
                 continue
             has_payload_error = False
 
         await self._save_files(
-            binary_content, str(page.url), content_type, folder_path, filename
+            binary_content=binary_content,
+            file_url=str(page.url),
+            resource_type=resource_type,
+            content_type=page.content_type,
+            folder_path=folder_path,
+            filename=filename,
         )
 
     async def _post_content(self, url, payload) -> dict:
@@ -165,25 +196,40 @@ class AmeticeBot:
             )
         return await asyncio.gather(*list_tasks)
 
-    async def _save_files(
-        self, binary_content, file_url, content_type, folder_path, filename
-    ):
-        extension = file_url.split(".")[-1]
-        if "?forcedownload=1" in extension:
-            extension = extension.replace("?forcedownload=1", "")
-        if content_type == "url":
-            extension = "txt"
+    async def _save_files(self, **dic_args):
+        """Save a file by creating necessary folders."""
+        binary_content = dic_args["binary_content"]
+        file_url = dic_args["file_url"]
+        resource_type = dic_args["resource_type"]
+        content_type = dic_args["content_type"]
+        folder_path = dic_args["folder_path"]
+        filename = dic_args["filename"]
+
+        parsed = urlparse(file_url)
+        extension = os.path.splitext(parsed.path)[1]
+        if len(extension) == 0:
+            extension = guess_extension(content_type)
+            if extension is None:
+                extension = ""
+
+        if os.path.exists(folder_path):
+            nb_same_filename = get_nb_origin_same_filename(folder_path, filename)
+            if nb_same_filename > 0:
+                filename = f"{filename}_{nb_same_filename}"
+
+        if resource_type == "url":
+            extension = ".txt"
             os.makedirs(folder_path, exist_ok=True)
             async with aiofiles.open(
-                f"{folder_path}/{filename}.{extension}", mode="w"
+                f"{folder_path}/{filename}{extension}", mode="w"
             ) as file:
                 await file.write(file_url)
         else:
-            if content_type == "folder":
-                extension = "zip"
+            if resource_type == "folder":
+                extension = ".zip"
             os.makedirs(folder_path, exist_ok=True)
             async with aiofiles.open(
-                f"{folder_path}/{filename}.{extension}", mode="wb"
+                f"{folder_path}/{filename}{extension}", mode="wb"
             ) as file:
                 await file.write(binary_content)
 
@@ -208,6 +254,7 @@ class AmeticeBot:
                 course_info["fullname"]: {} for course_info in courses_info
             }
             topics_info = await self._get_topics_info(courses_info)
+            list_tasks = []
             for topic_info in topics_info:
                 course_name = topic_info[0]
                 dic_data = topic_info[1]
@@ -225,59 +272,46 @@ class AmeticeBot:
                             if "url" not in dic_cm:
                                 continue
                             file_url = dic_cm["url"]
-                            is_url_not_treated = False
+                            resource_type = None
                             for re_name, re_url in DIC_NAME_REGEX.items():
-                                if re_name in LIST_NOT_TREATED_TYPES and re.match(
-                                    re_url, file_url
-                                ):
-                                    is_url_not_treated = True
+                                if re.match(re_url, file_url):
+                                    resource_type = re_name
 
-                            if is_url_not_treated:
+                            if resource_type is None:
                                 continue
-                            if (
-                                re.match(DIC_NAME_REGEX["resource"], file_url)
-                                is not None
-                            ):
-                                tuple_url = (f"{file_url}&redirect=1", "resource")
 
-                            elif re.match(DIC_NAME_REGEX["url"], file_url) is not None:
-                                tuple_url = (f"{file_url}&redirect=1", "url")
+                            if resource_type == "folder":
+                                file_url = f"https://ametice.univ-amu.fr/mod/folder/download_folder.php?id={cm_id}"
 
-                            elif (
-                                re.match(DIC_NAME_REGEX["folder"], file_url) is not None
-                            ):
-                                tuple_url = (
-                                    f"https://ametice.univ-amu.fr/mod/folder/download_folder.php?id={cm_id}",
-                                    "folder",
+                            else:
+                                file_url = f"{file_url}&redirect=1"
+
+                            if "." in filename:
+                                tuple_before_after = os.path.splitext(filename)
+                                if guess_type(tuple_before_after[1]) is not None:
+                                    filename = tuple_before_after[0]
+
+                            valid_filename = get_valid_filename(filename)
+                            valid_school_year = get_valid_filename(school_year)
+                            valid_course_name = get_valid_filename(course_name)
+                            valid_topic_name = get_valid_filename(topic_name)
+
+                            folder_path = f"Fichiers_Ametice/{valid_school_year}/{valid_course_name}/{valid_topic_name}"
+
+                            list_tasks.append(
+                                asyncio.create_task(
+                                    self._get_content_file_save(
+                                        file_url=file_url,
+                                        resource_type=resource_type,
+                                        folder_path=folder_path,
+                                        filename=valid_filename,
+                                    )
                                 )
-
-                            self.dic_course_topics[course_name][topic_name].append(
-                                {
-                                    "filename": filename,
-                                    "tuple_url": tuple_url,
-                                }
                             )
                             nb_treated += 1
                             if nb_treated == len(list_cm_id):
                                 break
 
-            list_tasks = []
-            for course_name in self.dic_course_topics:
-                for topic_name in self.dic_course_topics[course_name]:
-                    for dic_file in self.dic_course_topics[course_name][topic_name]:
-                        file_url = dic_file["tuple_url"]
-                        valid_filename = get_valid_filename(dic_file["filename"])
-                        valid_school_year = get_valid_filename(school_year)
-                        valid_course_name = get_valid_filename(course_name)
-                        valid_topic_name = get_valid_filename(topic_name)
-                        folder_path = f"Fichiers_Ametice/{valid_school_year}/{valid_course_name}/{valid_topic_name}"
-                        list_tasks.append(
-                            asyncio.create_task(
-                                self._get_content_file_save(
-                                    file_url, folder_path, valid_filename
-                                )
-                            )
-                        )
             await asyncio.gather(*list_tasks)
             print(f"\nTéléchargement terminé en {round(time() - deb, 1)} secondes.")
 

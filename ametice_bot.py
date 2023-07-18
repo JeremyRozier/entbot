@@ -32,7 +32,7 @@ def get_nb_origin_same_filename(folder_path, filename):
     """
     Returns for a given filename the number of files
     already saved which match with this pattern
-    rf"{filename}(_\d+)?" 
+    rf{filename}(_d+)?
     or 0 if there aren't any conflicts.
     """
     list_files = [
@@ -161,9 +161,13 @@ class AmeticeBot:
         resp_my = await self.session.get(URL_AMETICE)
         content = await resp_my.read()
         soup = BeautifulSoup(bytes.decode(content), features="html.parser")
-        input_sess_key = soup.find("input", attrs={"name": "sesskey"})
-        sess_key = input_sess_key["value"]
-        return sess_key
+        data = soup.find_all("script")[1].string
+        pattern_js_variable = re.compile(r"M\.cfg = ([^;]*)")
+        string_js_variable = re.findall(pattern_js_variable, data)[0]
+        dic_js_variable = json.loads(string_js_variable)
+        sesskey = dic_js_variable["sesskey"]
+
+        return sesskey
 
     async def _get_courses_info(self) -> dict:
         """Method to get the informations related

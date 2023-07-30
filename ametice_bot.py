@@ -264,57 +264,63 @@ class AmeticeBot:
                 dic_data = topic_info[1]
                 list_topics = dic_data["section"]
                 list_dic_cm = dic_data["cm"]
+                dic_cm_id_topic = {}
+
                 for dic_topic in list_topics:
                     topic_name = dic_topic["title"]
-                    self.dic_course_topics[course_name][topic_name] = []
                     list_cm_id = dic_topic["cmlist"]
-                    nb_treated = 0
-                    for dic_cm in list_dic_cm:
-                        cm_id = dic_cm["id"]
-                        if cm_id in list_cm_id:
-                            filename = dic_cm["name"]
-                            if "url" not in dic_cm:
-                                continue
-                            file_url = dic_cm["url"]
-                            resource_type = None
-                            for re_name, re_url in DIC_NAME_REGEX.items():
-                                if re.match(re_url, file_url):
-                                    resource_type = re_name
-
-                            if resource_type is None:
-                                continue
-
-                            if resource_type == "folder":
-                                file_url = f"https://ametice.univ-amu.fr/mod/folder/download_folder.php?id={cm_id}"
-
-                            else:
-                                file_url = f"{file_url}&redirect=1"
-
-                            if "." in filename:
-                                tuple_before_after = os.path.splitext(filename)
-                                if guess_type(tuple_before_after[1]) is not None:
-                                    filename = tuple_before_after[0]
-
-                            valid_filename = get_valid_filename(filename)
-                            valid_school_year = get_valid_filename(school_year)
-                            valid_course_name = get_valid_filename(course_name)
-                            valid_topic_name = get_valid_filename(topic_name)
-
-                            folder_path = f"Fichiers_Ametice/{valid_school_year}/{valid_course_name}/{valid_topic_name}"
-
-                            list_tasks.append(
-                                asyncio.create_task(
-                                    self._get_content_file_save(
-                                        file_url=file_url,
-                                        resource_type=resource_type,
-                                        folder_path=folder_path,
-                                        filename=valid_filename,
-                                    )
-                                )
+                    dic_cm_id_topic.update(
+                        dict(
+                            zip(
+                                list_cm_id, [topic_name for i in range(len(list_cm_id))]
                             )
-                            nb_treated += 1
-                            if nb_treated == len(list_cm_id):
-                                break
+                        )
+                    )
+
+                for dic_cm in list_dic_cm:
+
+                    cm_id = dic_cm["id"]
+                    topic_name = dic_cm_id_topic[cm_id]
+                    filename = dic_cm["name"]
+                    if "url" not in dic_cm:
+                        continue
+                    file_url = dic_cm["url"]
+                    resource_type = None
+                    for re_name, re_url in DIC_NAME_REGEX.items():
+                        if re.match(re_url, file_url):
+                            resource_type = re_name
+
+                    if resource_type is None:
+                        continue
+
+                    if resource_type == "folder":
+                        file_url = f"https://ametice.univ-amu.fr/mod/folder/download_folder.php?id={cm_id}"
+
+                    else:
+                        file_url = f"{file_url}&redirect=1"
+
+                    if "." in filename:
+                        tuple_before_after = os.path.splitext(filename)
+                        if guess_type(tuple_before_after[1]) is not None:
+                            filename = tuple_before_after[0]
+
+                    valid_filename = get_valid_filename(filename)
+                    valid_school_year = get_valid_filename(school_year)
+                    valid_course_name = get_valid_filename(course_name)
+                    valid_topic_name = get_valid_filename(topic_name)
+
+                    folder_path = f"Fichiers_Ametice/{valid_school_year}/{valid_course_name}/{valid_topic_name}"
+
+                    list_tasks.append(
+                        asyncio.create_task(
+                            self._get_content_file_save(
+                                file_url=file_url,
+                                resource_type=resource_type,
+                                folder_path=folder_path,
+                                filename=valid_filename,
+                            )
+                        )
+                    )
 
             await asyncio.gather(*list_tasks)
             print(f"\nTéléchargement terminé en {round(time() - deb, 1)} secondes.")

@@ -1,3 +1,6 @@
+"""Module which contains the whole code to make the bot work
+in the class AmeticeBot."""
+
 import asyncio
 import json
 import unicodedata
@@ -9,7 +12,7 @@ from mimetypes import guess_extension, guess_type
 import aiohttp
 import aiofiles
 from bs4 import BeautifulSoup
-from constants import DIC_NAME_REGEX, URL_LOGIN, URL_AMETICE
+from constants import DIC_NAME_REGEX, HEADERS, Payload, URL
 
 
 def get_valid_filename(filename):
@@ -19,6 +22,11 @@ def get_valid_filename(filename):
     underscores; and remove anything that is not an alphanumeric, dash,
     underscore, or dot.
     """
+    if "." in filename:
+        tuple_before_after = os.path.splitext(filename)
+        if guess_type(tuple_before_after[1]) is not None:
+            filename = tuple_before_after[0]
+
     valid_filename = str(filename).strip().replace(" ", "_")
     valid_filename = re.sub(r"(?u)[^-\w.]", "", valid_filename)
     valid_filename = unicodedata.normalize("NFKD", valid_filename)
@@ -61,40 +69,12 @@ class AmeticeBot:
         self.sess_key = ""
         self.session = "aiohttp.ClientSession()"
 
-        self.login_payload = {
-            "username": f"{self.username}",
-            "password": f"{self.password}",
-            "_eventId": "submit",
-            "execution": "486eecad-5c6c-4128-a041-54316439b2ab_ZXlKaGJHY2lPaUpJVXpVeE1pSXNJblI1Y0NJNklrcFhWQ0o5LkRsdnFrajF4aUY0SkdiSUJnUlhPeF9MN2kyT3U0M1JEZzNMSklScmxZYVJ4ZS11c1FodDlZWUpqVjJpWUtrYnNYLXZ5X0hpSGU2WmxwQ1RaRVpHUUNLWkhVVC1VeWFFX1o2bE51NXJRQ2tCZXBzNDd0dzl4T211R1BodzA5QkJiWnNfOEtzUS1mMkZoNXBUMEJlTXVrbUNTZ3RDV3VlcE1MWVp5bEtLRnB3QTdIdXY5dDR1MXVpUW8tclg5blk4Sm9zVUdGbXZsSTVmMlJoUUNUSVprQ2FNdXE0aEo0Z2ItMDNGaHJCZ1ZVMjItOGJJdWNKeThYOHVYTWxkNnpEVlNPYVUtem9oQmxyc0tVTlBwTFlaQlpyMnE1b0h4UWlsOVlwcVlpTGs3NUdyU2xHeXpLSHdjOXF6MnFNdFR1VWxLQ0lRRmJXUUMtMGpudDIxcTJCeXY0RzB2dUhWTDRtTDgwZ3ZyV0E2NEVITklJaHA3c0Y5c1dQTHVLMmltdXZ4aVUzcWFuMnRhbVI3YlJwRjdhejQ5ckc4TEs4ZjZGT3F0RDVKaXg4REZjLTd1ODZjMlByZ0o4N2lnQ3NNcjYzaDVlclBRUnE4bEhDTkVwemlkdkhuenFWWmluM1QwcHkzN3JNRlN4S3puUnZKTFdMb1JnQTBNeHR1N3V1VnFIQzdzMW4ySENzQXJ2WU5MSmh5Q3g1ZmtKYU5oNTlqSkhrQ3ByYUc1WlZfaFVzYUdZYlo5TklJUU13SzVIQzVSSWx1Tkt5cDhxUGJYRG41RXdSQmFHb183eWFvLUMzS1BFV0FGZ29zQ3g0UEMwUXd2VXd2VS1lTHB3cGJtN29vajEwMUFiZXBZcmlUMUNteW41b3NSS3lEc0p3TmFTd0ZtQjY5amc1R0VKemhDb04wMzRxel93bXdFQTdQU19hMF9KUHcxUS1WMGF1bTE2LVVveFd0dWpTZ3U0YktfdGUyenRSSU1QbWpVTjBtZC1RNndreFpOQUp0aWtSM0hrbENyb3JCQVJVbFMzazhQQnhEeENsM2FfRW5jTm0tSGhIOEhsby1qLWFCcFBZRTZJOEdQZjVHQ3hHVElOV3ZlUkRDaGJUanNRRktqR0pjdWVFOFB3bWtnNjlkNnZpLWxyZkdJOHc5U0tESmdLQ2RvNlFvRjlMUFY1N2h5b2FuTy15MlRpdDJwZkZNSVM5b3prc3RzMkUtR2I3RDlMRnJITHJRY0pZcVJEMHFQWUdpb24wY28ybk1RQ2JtREVITGVrdWlrcHJubkR2RHRpbVdNUklXZzdhQTNsYlBFcU55S2hnR1B6YjZzd2JxOVI2X1N2QVJXSkJ0SVFDZ25hMHZzZWpSanU0OU5RcGh2TV9qbEh4N2YzVGRLQTFmY2JCNUV5alV6MTRodVlORThrQzVZNjl0cFpieGxIaG90U2ozTlJjY1VPSG1CdlNkVU9LdU9KN3RzV2hIRklDVUZZamFtN0V0RkppYVNPUXViSEJudExJd1VzazRiNnBNcVpvR1JpM3M5bGZlb2hCc1ZuY0tSaU13VEFaQS1mc2ljU080UjlmZE5PTE81eUxOdzhSQ2oxWnpMWUFjQ1YzemNKVWFnci16SnYtVFJaRFN4SWx1blVGWjRXQTZHRWdlX3VkR2VaeDhWcjhCcmZCdUdtMndTQzRocHI1aUlmSUZnbnFEc19GTG9OdmZDNlVsRHhsa0c0Q3ZvWG16SHpUUW94ZnhqOG9CTTQwWWNCeHNlbXJrM2RPWEFfeTY0RFdDSC1lUFoxdGlic1J6UW1QN2ZqYkFjNFVVTllSTVdyUWN4aGxtTWw3Y2dfXzNZeDVnWDZ1MkNRWTZZLTRnZEtEMmlFOGJCWTBLV2ZlcFQyTUJZQWQ5MnNoM3VJaUJBWUNROElKV1Y2QnJTZTJVUnkxNXJib3FXZFcya2E1d2NuOWo4d3VxS0NHSmRLSUp1Nkszc1Y4VVpKLWYxekVIMUUwRkdrOEdld1NEN24tYUZkejQwc1VvQ1Z1aDdEVWhhMVZTMlZieEp2dFlIOEFpT1pvVkZncVJNUGJ0dHVMWGlSeXZMdjRyTXJ2V3g0RWFTWG56NEx0OFJFMXRaYzZORDRCWE15SmV2TGhodTZFSFg2WC1KeV9oOFRVenctU1lvLWEyQnB0SnpaaG4xbkFUYS1WU3RtYjNla1I3cS1fUTJKbndjc1lpRXJpTmxnUUcySHQ4M1VRU3VzVjVxazhWdEVscDVQclVVc1hZU2hJWEdDOGJLdXdvaXIwVGY0RzBabmJYX1Z4Vm5iUTlocUMwbk52aUJLakx2Rjk2WFB6NWNUWXp4QlROZEU2elRPNEdaUU5sanlzQlRFSTVGc2FPOUFUWW1ETlF0Sks0Q1ZoV0wxYmlrcDExdUVOYXhvWUhYRk5aNFVwM0pWTVVjTG5fTkFrYlhrYW40LWotMU5yalJjMFg5ZHNHRExvZFFsTm5oWG43M2VlZGR4QnhRSzFXc3h6WklpRWhwajJXMUtpUmMwX25jTkkwRm1oeDRFMHFRcW56MjQ0Q3kzUEg0enA4dzVaQ0JkNTNIMmptM1lDSkVUU1F6TVBWNEZwR0tNR1BEWk44WGw5UjdqRFZxMF9tZ3RVaGRnb1BlRTAtR0FiZ00xcmxaNWhDNXJJQ1J4eFRYMFJLa2JRQkRNcDB6MzNVb0E2eUtnZ1ZwME04Umo3TnpERUxoQmpqc2NKM2lXbWhLWjFrTkhLRUVKRGstUUQ4ZFZqM2Z4U1M4bmN4ZFdlc3gxZWFQeWFMTVIwWEZxUXBNLUt5N2NVMHR2WmlqX1NrQ3J0MTNQRG5YaDRiX0NVbl9NZVJtWm1SS05PUmU2QlBjbTBSTkYtaHF6RGJ6NHBjS3k0ZkQ0Z21xOHNfd3RtRjF5cHRDUWRuY0lOR2RZZjNQSjBwRGxwZktzdVpZd2p4YVlzeFpaV1Y4anRCQy1HTk9PT2NBQlpYaTFGMzZRcHczdGU1YUxtckRzdWlGeWFNdUtfMkx5VHhDSzhOWWxvekp2REk1RTBFT3lCNUNLR3YyYlhpVnBNQ0ZULThQNGJhRHJYZHo3ZnJNSTdTNUlNZDh6XzVveGMtMFpWRFZPTzF4YUl1TzJweVFhZk1MVjloN2tZUUdFV3haSFg0a2dvQkZWYWl4VU1VaUpzUjFCY0ZjdXBoNjR6bTJuVUlaTVlsTTNhTVV1LUtWUXRHN21LTC02V1VDQjVObzRJbE9TWF9Tbk01UVQxdmw5RldoNzVlNGFWb1hSdkh6WlFWdV9mTTVqVWE2ZHVSSzIyYUp2ajRRdmVFMEM0dmxKRDJZNG5MUDVNZU9oZWo1UVpWcU05SGNTMUp0ZTdRSFpJWmlUa1pKUkNMcVg1TTZkTC1mUTk4aVpFa0I4RE8wMG5YTTNxWEJVSUhOYTdKNGZfZlhoQWoyam5XNUNhbDdxanpKNGlJS3ByRFFleE9YWmJDNVFVczNiTkltZ0tsLV9TRy1SY2M3YlFNbm0xamhYaHFXb3NFaUFkdnB4Y3N4WGpndXBMcHY0VTB5TDdwUDFDRWFpLVdUaEw0OWdBYlBoR1N4aVU1SGFDa1Q2dGM3eVZGbUJJaWR5RTJWVnY4OEFXcEFNOVRrUjlacFB4QTNYZnZ1aEpJQjR5S09DV3lFUzROb0VyWHYtd2gwc1Q2RU9MZ0MxSWNFdHVtWDJHQm9yZm5YZmRKWFR4RVFaa0RTWGtHX1JXMlUxdExCVEZSdF9sOEczLVFDQUxNbjNqdktzNm9NeENjZWdUbEVnMHpWV1cwOEFSRFN3dVhodkoycWJwdmRPRUN0RUxfR1U3dmRnbk1MSko1TXljYUJOVExQenBBWjgyekgtd3RYR2NlMC1Yb29XQWtqQXktdUM5TzZOaTU1c3BVZFBXdVdnOGxTS2hYcEt5RGFIMUd4bjRaUWNSR3pramY4NVhWU1V4UWIxMXp0WE1ybVdFOUFLang5bl9VX2lleE8wWmd5VGYwMkcwZXB5UEgwa0VCOVU2Vm9QeHVBaUIxbUEybVJQalFwRlRpZkZHTmdBS0hIQk5wUzlOVGZ1YXhOaGVkRndQWFVvSDNucTVZY0JZcmhPeEhVZFUyWHkwQVVkTGdMZVNoY21udVZHZlptclJvSnBjZ2hfdk52X2NWTmFfQnJ0SmZBMXFpOFFFbFZqTENYejBrWDFuT21KZWF2ZllVSjVQOXJFNng2UzVYdWtXT2ZEVVRzRU9vZWx1YXVSZ0lFS0RZNFZaNEMtaHlQSVFRSmxrd1Bmam9OajlLcFlPLW5uNUphOU1yd0plTGVTVDFyM2RNalZGT2I1NkpPUC1NdkNKRjRsdVB0UVBlNkdnMVpNUlJid29adWVzM1FTZXRlNk52NERROWpiMnJSTi1EcXpCMVBOSmsyTldTQXF4MmpMRko2Uzk3amE4ZFNpMmRDZjgzZG1HM1NXd2xTM18xT05ndGgtc3dRdWRuUGM0ZDh4RlkyMVRuaVV1TGxVYXZZNmt6Vmk4ZXVWVTRoZ2hzTWl5NDVSNEVkb3FPVjIxb1lGckM1TnFBTVpjcFAtU0lRcV94Xzd4bDZld0ExVVVza0s3RTFZaGx6cERfdnNBczRmXzJ1SkFYblAwSVlnS29FMmZaNEU4cmZ3M1R5bF9RSzFkQ0R3LU5uWjB2STY5OVpBN28xeWNjOVlVYU00WkpZaEVaTmNNdHowbUUtLUpSN080NnV5VHZjb3Jra0d1anVDOXlxN3BPaGoxSGFlZFpTUFlLRU0taV9OTDlsSUZTNlZ0bVNzeGliRzlxbmM3b2JZdW42Mi1EMXVXX280M01GZXQwOGZVLU9uRWdpcWxQZVQtSGp3dExuRVFmbl9YLVZMRU1kaWx6c281N18tOXVoUVFvODFOcHZzVEtLYUFaSnVaY0NYUzVKcWVkMm9KN0pYU09hb1lLZmhRSUVOY1VRRkdtTFAzaGNmVjVzSkNpYWNJZEM1cEx6YUxRVldmSmhNY0ktU3ROWTJqb1BnWm1PdlZLXzQ5ZlRuM21hRTVHV25kQlRyckExbGlYemNCaWZVZnBwTjZ4WC10aUdldWxIOEstR0FmY01EckZ3T3ZBSEtWa1cyaDI0V0Jjb2FCS21GM1ZpdGxENndWcUxLTVVpT3NGVGNpdXlWaFlsTlVEMzhPSy1BYUtLTnJNZ3pwMk84UnNUUEVSTFNZLVI2c1hzUWtuRURvWl9zS1FvWEdSNUJ1SGd5bXI1NzhYYS5NR2NaOVpacnY2NmRUV0tTSTVKUkVkVDZHcGw5ZTB2RnhpZHhNOWZQQXFOck5Eb3RvR2hua25MWkh4ZTgyaVNmb3lFLVJuTTR0Z215VV9zNnZRRUZBdw==",
-        }
-
-        self.courses_payload = [
-            {
-                "index": 0,
-                "methodname": "core_course_get_enrolled_courses_by_timeline_classification",
-                "args": {
-                    "offset": 0,
-                    "limit": 24,
-                    "classification": "all",
-                    "sort": "fullname",
-                    "customfieldname": "",
-                    "customfieldvalue": "",
-                },
-            }
-        ]
-
-        self.headers = {
-            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
-            "Connection": "keep-alive",
-        }
-
     async def _get_content(self, name, url) -> tuple[str, str]:
         page = await self.session.get(url)
         content = await page.read()
         return (name, content)
 
     async def _get_content_file_save(self, **dic_args):
-
         file_url = dic_args["file_url"]
         resource_type = dic_args["resource_type"]
         folder_path = dic_args["folder_path"]
@@ -133,18 +113,22 @@ class AmeticeBot:
         info = json.loads(bytes.decode(await request.read()))[0]["data"]
         return info
 
-    async def _post_topics(self, url, payload, course_name) -> tuple[str, dict]:
-        info = await self._post_content(url, payload)
+    async def _post_topics(
+        self, url, course_id, course_name
+    ) -> tuple[str, dict]:
+        info = await self._post_content(url, Payload.topics(course_id))
         data = json.loads(info)
-        return (course_name, data)
+        return {"course_name": course_name, "data": data}
 
-    async def _login(self, login_url=URL_LOGIN) -> bool:
+    async def _login(self, login_url=URL.LOGIN) -> bool:
         """Method to login with the
         credentials given in the class attributes
         - return True if login succeeded.
         - return False if login failed."""
         print("\nConnexion...")
-        resp_login = await self.session.post(login_url, data=self.login_payload)
+        resp_login = await self.session.post(
+            login_url, data=Payload.login(self.username, self.password)
+        )
         if (
             resp_login.status == 401
             or len(self.password) == 0
@@ -158,7 +142,7 @@ class AmeticeBot:
     async def _get_sess_key(self) -> int:
         """Method to get the session key delivered
         by ametice once connected."""
-        resp_my = await self.session.get(URL_AMETICE)
+        resp_my = await self.session.get(URL.AMETICE)
         content = await resp_my.read()
         soup = BeautifulSoup(bytes.decode(content), features="html.parser")
         data = soup.find_all("script")[1].string
@@ -172,29 +156,24 @@ class AmeticeBot:
     async def _get_courses_info(self) -> dict:
         """Method to get the informations related
         to the courses the student follows."""
-        url_get_courses = f"https://ametice.univ-amu.fr/lib/ajax/service.php?sesskey={self.sess_key}&info=core_course_get_enrolled_courses_by_timeline_classification"
-        courses_info = await self._post_content(url_get_courses, self.courses_payload)
+        url_get_courses = URL.course(self.sess_key)
+        courses_info = await self._post_content(
+            url_get_courses, Payload.COURSES
+        )
         return courses_info
 
-    async def _get_topics_info(self, courses_info) -> dict:
+    async def _get_topics_info(self, courses_info) -> list[dict]:
         """Method to get the informations related
         to the topics of the courses the student follows."""
-        url_get_topics = f"https://ametice.univ-amu.fr/lib/ajax/service.php?sesskey={self.sess_key}&info=core_courseformat_get_state"
+        url_get_topics = URL.topics(self.sess_key)
         list_tasks = []
         for course_info in courses_info:
             current_course_name = course_info["fullname"]
             current_course_id = course_info["id"]
-            topics_payload = [
-                {
-                    "index": 0,
-                    "methodname": "core_courseformat_get_state",
-                    "args": {"courseid": current_course_id},
-                }
-            ]
             list_tasks.append(
                 asyncio.create_task(
                     self._post_topics(
-                        url_get_topics, topics_payload, current_course_name
+                        url_get_topics, current_course_id, current_course_name
                     )
                 )
             )
@@ -217,7 +196,9 @@ class AmeticeBot:
                 extension = ""
 
         if os.path.exists(folder_path):
-            nb_same_filename = get_nb_origin_same_filename(folder_path, filename)
+            nb_same_filename = get_nb_origin_same_filename(
+                folder_path, filename
+            )
             if nb_same_filename > 0:
                 filename = f"{filename}_{nb_same_filename}"
 
@@ -237,16 +218,79 @@ class AmeticeBot:
             ) as file:
                 await file.write(binary_content)
 
+    def _get_classified_cm_id(self, list_topics) -> dict:
+        dic_cm_id_topic = {}
+        for dic_topic in list_topics:
+            topic_name = dic_topic["title"]
+            list_cm_id = dic_topic["cmlist"]
+            dic_cm_id_topic.update(
+                dict(
+                    zip(
+                        list_cm_id,
+                        [topic_name for i in range(len(list_cm_id))],
+                    )
+                )
+            )
+        return dic_cm_id_topic
+
+    def _create_download_task(
+        self, dic_topic_info, dic_cm_id_topic, dic_cm, school_year
+    ):
+        topic_name = dic_cm_id_topic[dic_cm["id"]]
+        filename = dic_cm["name"]
+
+        if "url" not in dic_cm:
+            return None
+
+        resource_url = dic_cm["url"]
+        resource_type = self.get_resource_type(resource_url)
+
+        if resource_type is None:
+            return None
+
+        if resource_type == "folder":
+            resource_url = URL.folder(dic_cm["id"])
+
+        else:
+            resource_url = f"{resource_url}&redirect=1"
+
+        folder_path = os.path.join(
+            "Fichiers_Ametice",
+            get_valid_filename(school_year),
+            get_valid_filename(dic_topic_info["course_name"]),
+            get_valid_filename(topic_name),
+        )
+
+        return asyncio.create_task(
+            self._get_content_file_save(
+                file_url=resource_url,
+                resource_type=resource_type,
+                folder_path=folder_path,
+                filename=get_valid_filename(filename),
+            )
+        )
+
+    def get_resource_type(self, resource_url):
+        """Get the type of a resource with its url"""
+        resource_type = None
+        for re_name, re_url in DIC_NAME_REGEX.items():
+            if re.match(re_url, resource_url):
+                resource_type = re_name
+        return resource_type
+
     async def download_all_documents(self):
         """Method to download all the documents
         from the Ametice account the session is
         connected to.
         """
         deb = time()
-        connector = aiohttp.TCPConnector(force_close=True)
+
         async with aiohttp.ClientSession(
-            headers=self.headers, connector=connector, trust_env=True
+            headers=HEADERS,
+            connector=aiohttp.TCPConnector(force_close=True),
+            trust_env=True,
         ) as session:
+            
             self.session = session
             is_logged = await self._login()
             if not is_logged:
@@ -254,76 +298,30 @@ class AmeticeBot:
             self.sess_key = await self._get_sess_key()
             courses_info = (await self._get_courses_info())["courses"]
             school_year = "-".join(courses_info[0]["fullname"].split("-")[:2])
-            self.dic_course_topics = {
-                course_info["fullname"]: {} for course_info in courses_info
-            }
-            topics_info = await self._get_topics_info(courses_info)
+            table_topics_info = await self._get_topics_info(courses_info)
             list_tasks = []
-            for topic_info in topics_info:
-                course_name = topic_info[0]
-                dic_data = topic_info[1]
-                list_topics = dic_data["section"]
-                list_dic_cm = dic_data["cm"]
-                dic_cm_id_topic = {}
 
-                for dic_topic in list_topics:
-                    topic_name = dic_topic["title"]
-                    list_cm_id = dic_topic["cmlist"]
-                    dic_cm_id_topic.update(
-                        dict(
-                            zip(
-                                list_cm_id, [topic_name for i in range(len(list_cm_id))]
-                            )
-                        )
+            for dic_topic_info in table_topics_info:
+                table_cms = dic_topic_info["data"]["cm"]
+                dic_cm_id_topic = self._get_classified_cm_id(
+                    list_topics=dic_topic_info["data"]["section"]
+                )
+
+                for dic_cm in table_cms:
+                    task = self._create_download_task(
+                        dic_topic_info, dic_cm_id_topic, dic_cm, school_year
                     )
 
-                for dic_cm in list_dic_cm:
-
-                    cm_id = dic_cm["id"]
-                    topic_name = dic_cm_id_topic[cm_id]
-                    filename = dic_cm["name"]
-                    if "url" not in dic_cm:
-                        continue
-                    file_url = dic_cm["url"]
-                    resource_type = None
-                    for re_name, re_url in DIC_NAME_REGEX.items():
-                        if re.match(re_url, file_url):
-                            resource_type = re_name
-
-                    if resource_type is None:
+                    if task is None:
                         continue
 
-                    if resource_type == "folder":
-                        file_url = f"https://ametice.univ-amu.fr/mod/folder/download_folder.php?id={cm_id}"
-
-                    else:
-                        file_url = f"{file_url}&redirect=1"
-
-                    if "." in filename:
-                        tuple_before_after = os.path.splitext(filename)
-                        if guess_type(tuple_before_after[1]) is not None:
-                            filename = tuple_before_after[0]
-
-                    valid_filename = get_valid_filename(filename)
-                    valid_school_year = get_valid_filename(school_year)
-                    valid_course_name = get_valid_filename(course_name)
-                    valid_topic_name = get_valid_filename(topic_name)
-
-                    folder_path = f"Fichiers_Ametice/{valid_school_year}/{valid_course_name}/{valid_topic_name}"
-
-                    list_tasks.append(
-                        asyncio.create_task(
-                            self._get_content_file_save(
-                                file_url=file_url,
-                                resource_type=resource_type,
-                                folder_path=folder_path,
-                                filename=valid_filename,
-                            )
-                        )
-                    )
+                    list_tasks.append(task)
 
             await asyncio.gather(*list_tasks)
-            print(f"\nTéléchargement terminé en {round(time() - deb, 1)} secondes.")
+            print(
+                "\nTéléchargement terminé en"
+                f" {round(time() - deb, 1)} secondes."
+            )
 
 
 if __name__ == "__main__":

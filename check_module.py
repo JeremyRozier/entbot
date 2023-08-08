@@ -1,3 +1,7 @@
+"""Downloads missing modules"""
+
+# pylint:disable=W0611:unused-import
+
 import subprocess
 import sys
 

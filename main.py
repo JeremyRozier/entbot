@@ -1,7 +1,11 @@
+"""File to execute to download all the files
+of an Ametice session"""
+
 import asyncio
 from getpass import getpass
-import check_module
+import check_module # pylint:disable=W0611:unused-import
 from ametice_bot import AmeticeBot
+
 
 print(
     """\nCe programme permet de télécharger toutes les

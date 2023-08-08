@@ -3,6 +3,7 @@ There are also variable strings defined in
 the classes Payload and URL used for the bot."""
 
 import re
+import check_dir # pylint:disable=W0611:unused-import
 
 HEADERS = {
     "user-agent": (
@@ -26,7 +27,7 @@ with open("execution_code.txt", "r", encoding="utf-8") as file:
 
 
 class URL:
-    """Class used to store urls"""
+    """Class used to store urls."""
 
     LOGIN = "https://ident.univ-amu.fr/cas/login"
     AMETICE = (
@@ -36,7 +37,7 @@ class URL:
 
     @staticmethod
     def course(session_key):
-        """Method to get the url to get the course"""
+        """Method to get the url to get the courses data."""
         return (
             "https://ametice.univ-amu.fr/lib/ajax/"
             f"service.php?sesskey={session_key}&"
@@ -46,7 +47,7 @@ class URL:
     @staticmethod
     def topics(session_key):
         """Method to get the url of a topic with
-        a session key"""
+        a session key."""
         return (
             "https://ametice.univ-amu.fr/lib/ajax/service.php"
             f"?sesskey={session_key}&info=core_courseformat_get_state"
@@ -57,13 +58,12 @@ class URL:
         """Method to get the url of a folder with
         a course module id"""
         return (
-            "https://ametice.univ-amu.fr/mod/"
-            f"folder/download_folder.php?id={cm_id}"
+            "https://ametice.univ-amu.fr/mod/" f"folder/download_folder.php?id={cm_id}"
         )
 
 
 class Payload:
-    """Class used to store payloads"""
+    """Class used to store payloads."""
 
     COURSES = [
         {

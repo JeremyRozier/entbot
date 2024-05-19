@@ -12,49 +12,8 @@ from mimetypes import guess_extension, guess_type
 import aiohttp
 import aiofiles
 from bs4 import BeautifulSoup
-from constants import DIC_NAME_REGEX, HEADERS, Payload, URL
-
-
-def get_valid_filename(filename):
-    """
-    Return the given string converted to a string that can be used for a clean
-    filename. Remove leading and trailing spaces; convert other spaces to
-    underscores; and remove anything that is not an alphanumeric, dash,
-    underscore, or dot.
-    """
-    if "." in filename:
-        tuple_before_after = os.path.splitext(filename)
-        if guess_type(tuple_before_after[1]) is not None:
-            filename = tuple_before_after[0]
-
-    valid_filename = str(filename).strip().replace(" ", "_")
-    valid_filename = re.sub(r"(?u)[^-\w.]", "", valid_filename)
-    valid_filename = unicodedata.normalize("NFKD", valid_filename)
-    valid_filename = "".join(
-        [c for c in valid_filename if not unicodedata.combining(c)]
-    )
-    return valid_filename
-
-
-def get_nb_origin_same_filename(folder_path, filename):
-    """
-    Returns for a given filename the number of files
-    already saved which match with this pattern
-    rf{filename}(_d+)?
-    or 0 if there aren't any conflicts.
-    """
-    list_files = [
-        os.path.splitext(f)[0]
-        for f in os.listdir(folder_path)
-        if os.path.isfile(os.path.join(folder_path, f))
-    ]
-    list_same_file = [f for f in list_files if f == filename]
-    if len(list_same_file) == 0:
-        return 0
-
-    pattern = rf"{filename}(_\d+)?"
-    list_similar = [f for f in list_files if re.match(pattern, f)]
-    return len(list_similar)
+from constants import RegexPatterns, HEADERS, Payload, URL, LIST_TREATED_TYPES
+from filename_parser import get_valid_filename, get_nb_origin_same_filename
 
 
 class AmeticeBot:
@@ -69,7 +28,7 @@ class AmeticeBot:
         self.session_key = ""
         self.session = "aiohttp.ClientSession()"
 
-    async def _get_content(self, url) -> tuple[str, str]:
+    async def _get_binary_content(self, url):
         has_connection_error = True
         while has_connection_error:
             try:
@@ -92,8 +51,7 @@ class AmeticeBot:
         return {"response": response, "binary_content": binary_content}
 
     async def _get_content_file_save(self, **dic_args):
-        dic_content = await self._get_content(dic_args["resource_url"])
-
+        dic_content = await self._get_binary_content(dic_args["resource_url"])
         await self._save_files(
             binary_content=dic_content["binary_content"],
             file_url=str(dic_content["response"].url),
@@ -103,19 +61,19 @@ class AmeticeBot:
             filename=dic_args["filename"],
         )
 
-    async def _post_content(self, url, payload) -> dict:
+    async def _get_data(self, url, payload) -> dict:
         """Post the provided payload and returns the useful content
         of the response request."""
         request = await self.session.post(url, json=payload)
         data = json.loads(bytes.decode(await request.read()))[0]["data"]
         return data
 
-    async def _post_topics(
+    async def _get_topics_data(
         self, url, course_id, course_name
     ) -> tuple[str, dict]:
         """Post the payload matching the course_id provided
         to get the topics data related to the course_id."""
-        topics_data = await self._post_content(url, Payload.topics(course_id))
+        topics_data = await self._get_data(url, Payload.topics(course_id))
         data = json.loads(topics_data)
         return {"course_name": course_name, "data": data}
 
@@ -145,8 +103,7 @@ class AmeticeBot:
         content = await resp_my.read()
         soup = BeautifulSoup(bytes.decode(content), features="html.parser")
         data = soup.find_all("script")[1].string
-        pattern_js_variable = re.compile(r"M\.cfg = ([^;]*)")
-        string_js_variable = re.findall(pattern_js_variable, data)[0]
+        string_js_variable = RegexPatterns.JS_VARIABLE.search(data).group(1)
         dic_js_variable = json.loads(string_js_variable)
         sesskey = dic_js_variable["sesskey"]
 
@@ -155,7 +112,7 @@ class AmeticeBot:
     async def _get_table_courses_data(self) -> dict:
         """Method to get the informations related
         to the courses the student follows."""
-        table_courses_data = await self._post_content(
+        table_courses_data = await self._get_data(
             URL.course(self.session_key), Payload.COURSES
         )
         return table_courses_data
@@ -170,7 +127,7 @@ class AmeticeBot:
             current_course_id = course_info["id"]
             list_tasks.append(
                 asyncio.create_task(
-                    self._post_topics(
+                    self._get_topics_data(
                         url_get_topics, current_course_id, current_course_name
                     )
                 )
@@ -196,21 +153,22 @@ class AmeticeBot:
             if nb_same_filename > 0:
                 filename = f"{filename}_{nb_same_filename}"
 
+        os.makedirs(folder_path, exist_ok=True)
         if dic_args["resource_type"] == "url":
             extension = ".txt"
-            os.makedirs(folder_path, exist_ok=True)
-            async with aiofiles.open(
-                f"{folder_path}/{filename}{extension}", mode="w"
-            ) as file:
-                await file.write(dic_args["file_url"])
+            writing_mode = "w"
+            content_key = "file_url"
+
         else:
             if dic_args["resource_type"] == "folder":
                 extension = ".zip"
-            os.makedirs(folder_path, exist_ok=True)
-            async with aiofiles.open(
-                f"{folder_path}/{filename}{extension}", mode="wb"
-            ) as file:
-                await file.write(dic_args["binary_content"])
+            writing_mode = "wb"
+            content_key = "binary_content"
+
+        async with aiofiles.open(
+            f"{folder_path}/{filename}{extension}", mode=writing_mode
+        ) as file:
+            await file.write(dic_args[content_key])
 
     def _get_classified_cm_id(self, list_topics) -> dict:
         dic_cm_id_topic = {}
@@ -228,30 +186,20 @@ class AmeticeBot:
         return dic_cm_id_topic
 
     def _create_download_task(
-        self, dic_topic_info, dic_cm_id_topic, dic_cm, school_year
+        self, resource_type, dic_topic_info, dic_cm_id_topic, dic_cm
     ):
+        resource_url = self.get_resource_url(
+            resource_type, dic_cm["url"], dic_cm["id"]
+        )
+
         topic_name = dic_cm_id_topic[dic_cm["id"]]
         filename = dic_cm["name"]
-
-        if "url" not in dic_cm:
-            return None
-
-        resource_url = dic_cm["url"]
-        resource_type = self.get_resource_type(resource_url)
-
-        if resource_type is None:
-            return None
-
-        if resource_type == "folder":
-            resource_url = URL.folder(dic_cm["id"])
-
-        else:
-            resource_url = f"{resource_url}&redirect=1"
-
+        fullname = dic_topic_info["course_name"]
+        school_year = RegexPatterns.SCHOOL_YEAR_REGEX.search(fullname).group(0)
         folder_path = os.path.join(
             "Fichiers_Ametice",
             get_valid_filename(school_year),
-            get_valid_filename(dic_topic_info["course_name"]),
+            get_valid_filename(fullname),
             get_valid_filename(topic_name),
         )
 
@@ -264,13 +212,18 @@ class AmeticeBot:
             )
         )
 
-    def get_resource_type(self, resource_url):
-        """Get the type of a resource with its url"""
-        resource_type = None
-        for re_name, re_url in DIC_NAME_REGEX.items():
-            if re.match(re_url, resource_url):
-                resource_type = re_name
-        return resource_type
+    def get_resource_type(self, url):
+        return RegexPatterns.RESOURCE_TYPE.search(url).group(1)
+
+    def get_resource_url(self, resource_type, url, resource_id):
+        """Get the url pointing to the resource with its type"""
+        if resource_type == "folder":
+            resource_url = URL.folder(resource_id)
+
+        else:
+            resource_url = f"{url}&redirect=1"
+
+        return resource_url
 
     async def download_all_documents(self):
         """Method to download all the documents
@@ -278,10 +231,9 @@ class AmeticeBot:
         connected to.
         """
         deb = time()
-
         async with aiohttp.ClientSession(
             headers=HEADERS,
-            connector=aiohttp.TCPConnector(force_close=True),
+            connector=aiohttp.TCPConnector(force_close=True, limit=50),
             trust_env=True,
         ) as session:
             self.session = session
@@ -292,9 +244,6 @@ class AmeticeBot:
             table_courses_data = (await self._get_table_courses_data())[
                 "courses"
             ]
-            school_year = "-".join(
-                table_courses_data[0]["fullname"].split("-")[:2]
-            )
             table_topics_data = await self.get_table_topics_data(
                 table_courses_data
             )
@@ -307,8 +256,15 @@ class AmeticeBot:
                 )
 
                 for dic_cm in table_cms:
+                    if "url" not in dic_cm:
+                        continue
+                    resource_type = self.get_resource_type(dic_cm["url"])
+
+                    if resource_type not in LIST_TREATED_TYPES:
+                        continue
+
                     task = self._create_download_task(
-                        dic_topic_info, dic_cm_id_topic, dic_cm, school_year
+                        resource_type, dic_topic_info, dic_cm_id_topic, dic_cm
                     )
 
                     if task is None:

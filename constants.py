@@ -3,7 +3,7 @@ There are also variable strings defined in
 the classes Payload and URL used for the bot."""
 
 import re
-import check_dir # pylint:disable=W0611:unused-import
+import check_dir  # pylint:disable=W0611:unused-import
 
 HEADERS = {
     "user-agent": (
@@ -15,12 +15,6 @@ HEADERS = {
 
 LIST_TYPES = ["assign", "folder", "resource", "url", "quiz", "choice", "forum"]
 LIST_TREATED_TYPES = ["folder", "resource", "url"]
-DIC_NAME_REGEX = {
-    type_regex: re.compile(
-        rf"https://ametice\.univ-amu\.fr/mod/{type_regex}/view\.php\?id=[0-9]+"
-    )
-    for type_regex in LIST_TREATED_TYPES
-}
 
 with open("execution_code.txt", "r", encoding="utf-8") as file:
     EXECUTION_CODE = file.read()
@@ -58,7 +52,8 @@ class URL:
         """Method to get the url of a folder with
         a course module id"""
         return (
-            "https://ametice.univ-amu.fr/mod/" f"folder/download_folder.php?id={cm_id}"
+            "https://ametice.univ-amu.fr/mod/"
+            f"folder/download_folder.php?id={cm_id}"
         )
 
 
@@ -104,3 +99,14 @@ class Payload:
                 "args": {"courseid": course_id},
             }
         ]
+
+
+class RegexPatterns:
+    COURSE_ID = r"\{\\\"(-?[1-9][0-9]*)"
+    TIMELINE_URL = r"\"(.*)\""
+    URL_HEX_VALUES = r"\\x([0-9a-fA-F]{2})"
+    JS_VARIABLE = re.compile(r"M\.cfg = ([^;]*)")
+    RESOURCE_TYPE = re.compile(
+        rf"https://ametice\.univ-amu\.fr/mod/(.*)/view\.php\?id=[0-9]+"
+    )
+    SCHOOL_YEAR_REGEX = re.compile(r"\[\d+\-\d+\]")

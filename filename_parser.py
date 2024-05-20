@@ -4,6 +4,7 @@ from mimetypes import guess_type
 import unicodedata
 import os
 import re
+from constants import RegexPatterns
 
 def get_valid_filename(filename):
     """
@@ -18,7 +19,7 @@ def get_valid_filename(filename):
             filename = tuple_before_after[0]
 
     valid_filename = str(filename).strip().replace(" ", "_")
-    valid_filename = re.sub(r"(?u)[^-\w.]", "", valid_filename)
+    valid_filename = RegexPatterns.FILENAME_FORBIDDEN_CHARS.sub("", valid_filename)
     valid_filename = unicodedata.normalize("NFKD", valid_filename)
     valid_filename = "".join(
         [c for c in valid_filename if not unicodedata.combining(c)]

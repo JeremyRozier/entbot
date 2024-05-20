@@ -3,17 +3,18 @@ in the class AmeticeBot."""
 
 import asyncio
 import json
-import unicodedata
 from time import time
 import os
-import re
 from urllib.parse import urlparse
-from mimetypes import guess_extension, guess_type
+from mimetypes import guess_extension
 import aiohttp
 import aiofiles
 from bs4 import BeautifulSoup
-from constants import RegexPatterns, HEADERS, Payload, URL, LIST_TREATED_TYPES
+from constants import RegexPatterns, Headers, Payload, URL, LIST_TREATED_TYPES
 from filename_parser import get_valid_filename, get_nb_origin_same_filename
+import logging
+from logging_config import display_message
+from dotenv import load_dotenv
 
 
 class AmeticeBot:
@@ -21,12 +22,19 @@ class AmeticeBot:
     It is meant to get all the files from all the courses
     of an account with its credentials."""
 
-    def __init__(self, username, password) -> None:
+    def __init__(
+        self,
+        session: aiohttp.ClientSession,
+        username: str,
+        password: str,
+        show_messages=False,
+    ) -> None:
+        self.show_messages = show_messages
+        self.session = session
         self.username = username
         self.password = password
         self.dic_course_topics = {}
         self.session_key = ""
-        self.session = "aiohttp.ClientSession()"
 
     async def _get_binary_content(self, url):
         has_connection_error = True
@@ -52,7 +60,7 @@ class AmeticeBot:
 
     async def _get_content_file_save(self, **dic_args):
         dic_content = await self._get_binary_content(dic_args["resource_url"])
-        await self._save_files(
+        await self.save_files(
             binary_content=dic_content["binary_content"],
             file_url=str(dic_content["response"].url),
             resource_type=dic_args["resource_type"],
@@ -77,12 +85,11 @@ class AmeticeBot:
         data = json.loads(topics_data)
         return {"course_name": course_name, "data": data}
 
-    async def _login(self, login_url=URL.LOGIN) -> bool:
+    async def login(self, login_url=URL.LOGIN) -> bool:
         """Method to login with the
         credentials given in the class attributes
         - return True if login succeeded.
         - return False if login failed."""
-        print("\nConnexion...")
         resp_login = await self.session.post(
             login_url, data=Payload.login(self.username, self.password)
         )
@@ -91,12 +98,10 @@ class AmeticeBot:
             or len(self.password) == 0
             or len(self.username) == 0
         ):
-            print("Le mot de passe ou l'identifiant est incorrect.")
             return False
-        print("Connecté.")
         return True
 
-    async def _get_session_key(self) -> int:
+    async def get_session_key(self) -> int:
         """Method to get the session key delivered
         by ametice once connected."""
         resp_my = await self.session.get(URL.AMETICE)
@@ -109,7 +114,7 @@ class AmeticeBot:
 
         return sesskey
 
-    async def _get_table_courses_data(self) -> dict:
+    async def get_table_courses_data(self) -> dict:
         """Method to get the informations related
         to the courses the student follows."""
         table_courses_data = await self._get_data(
@@ -134,7 +139,7 @@ class AmeticeBot:
             )
         return await asyncio.gather(*list_tasks)
 
-    async def _save_files(self, **dic_args):
+    async def save_files(self, **dic_args):
         """Save a file by creating necessary folders."""
         filename = dic_args["filename"]
         folder_path = dic_args["folder_path"]
@@ -170,7 +175,7 @@ class AmeticeBot:
         ) as file:
             await file.write(dic_args[content_key])
 
-    def _get_classified_cm_id(self, list_topics) -> dict:
+    def get_classified_cm_id(self, list_topics) -> dict:
         dic_cm_id_topic = {}
         for dic_topic in list_topics:
             topic_name = dic_topic["title"]
@@ -185,7 +190,7 @@ class AmeticeBot:
             )
         return dic_cm_id_topic
 
-    def _create_download_task(
+    def create_download_task(
         self, resource_type, dic_topic_info, dic_cm_id_topic, dic_cm
     ):
         resource_url = self.get_resource_url(
@@ -230,55 +235,69 @@ class AmeticeBot:
         from the Ametice account the session is
         connected to.
         """
-        deb = time()
-        async with aiohttp.ClientSession(
-            headers=HEADERS,
-            connector=aiohttp.TCPConnector(force_close=True, limit=50),
-            trust_env=True,
-        ) as session:
-            self.session = session
-            is_logged = await self._login()
-            if not is_logged:
-                return
-            self.session_key = await self._get_session_key()
-            table_courses_data = (await self._get_table_courses_data())[
-                "courses"
-            ]
-            table_topics_data = await self.get_table_topics_data(
-                table_courses_data
+        display_message("Connexion...", self.show_messages)
+        is_logged = await self.login()
+        if not is_logged:
+            display_message(
+                "Le mot de passe ou l'identifiant est incorrect.",
+                self.show_messages,
+                logging.ERROR,
             )
-            list_tasks = []
+            return
+        display_message("Connecté.", self.show_messages)
+        self.session_key = await self.get_session_key()
+        display_message("Clé de session Ametice obtenue.", self.show_messages)
+        display_message(
+            "Récupération et téléchargement des cours...", self.show_messages
+        )
+        deb = time()
+        table_courses_data = (await self.get_table_courses_data())["courses"]
+        table_topics_data = await self.get_table_topics_data(
+            table_courses_data
+        )
+        list_tasks = []
 
-            for dic_topic_info in table_topics_data:
-                table_cms = dic_topic_info["data"]["cm"]
-                dic_cm_id_topic = self._get_classified_cm_id(
-                    list_topics=dic_topic_info["data"]["section"]
+        for dic_topic_info in table_topics_data:
+            table_cms = dic_topic_info["data"]["cm"]
+            dic_cm_id_topic = self.get_classified_cm_id(
+                list_topics=dic_topic_info["data"]["section"]
+            )
+
+            for dic_cm in table_cms:
+                if "url" not in dic_cm:
+                    continue
+                resource_type = self.get_resource_type(dic_cm["url"])
+
+                if resource_type not in LIST_TREATED_TYPES:
+                    continue
+
+                task = self.create_download_task(
+                    resource_type, dic_topic_info, dic_cm_id_topic, dic_cm
                 )
 
-                for dic_cm in table_cms:
-                    if "url" not in dic_cm:
-                        continue
-                    resource_type = self.get_resource_type(dic_cm["url"])
+                if task is None:
+                    continue
 
-                    if resource_type not in LIST_TREATED_TYPES:
-                        continue
+                list_tasks.append(task)
 
-                    task = self._create_download_task(
-                        resource_type, dic_topic_info, dic_cm_id_topic, dic_cm
-                    )
+        await asyncio.gather(*list_tasks)
+        display_message(
+            "Téléchargement terminé en" f" {round(time() - deb, 1)} secondes."
+        )
 
-                    if task is None:
-                        continue
 
-                    list_tasks.append(task)
-
-            await asyncio.gather(*list_tasks)
-            print(
-                "\nTéléchargement terminé en"
-                f" {round(time() - deb, 1)} secondes."
-            )
+async def main():
+    load_dotenv()
+    username = os.getenv("USERNAME")
+    password = os.getenv("PASSWORD")
+    async with aiohttp.ClientSession(
+        headers=Headers.LOGIN_HEADERS,
+        connector=aiohttp.TCPConnector(force_close=True, limit=50),
+        trust_env=True,
+    ) as session:
+        bot = AmeticeBot(session, username, password, show_messages=True)
+        await bot.download_all_documents()
 
 
 if __name__ == "__main__":
-    bot = AmeticeBot("username", "password")
-    asyncio.run(bot.download_all_documents())
+    asyncio.run(main())

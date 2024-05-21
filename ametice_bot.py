@@ -5,13 +5,17 @@ import asyncio
 import json
 from time import time
 import os
-from urllib.parse import urlparse
-from mimetypes import guess_extension
 import aiohttp
 import aiofiles
 from bs4 import BeautifulSoup
 from constants import RegexPatterns, Headers, Payload, URL, LIST_TREATED_TYPES
-from filename_parser import get_valid_filename, get_nb_origin_same_filename
+from filename_parser import (
+    get_valid_filename,
+    get_nb_origin_same_filename,
+    get_filename_nb,
+    get_file_extension,
+)
+from timestamp_functions import get_beg_school_year
 import logging
 from logging_config import display_message
 from dotenv import load_dotenv
@@ -33,55 +37,23 @@ class AmeticeBot:
         self.session = session
         self.username = username
         self.password = password
-        self.dic_course_topics = {}
+        self.dic_course_downloaded_cm = {}
+        self.dic_course_school_year = {}
         self.session_key = ""
 
-    async def _get_binary_content(self, url):
-        has_connection_error = True
-        while has_connection_error:
-            try:
-                response = await self.session.get(url)
-            except aiohttp.ClientConnectionError:
-                response = await self.session.get(url)
-                continue
-
-            has_connection_error = False
-
-        has_payload_error = True
-        while has_payload_error:
-            try:
-                binary_content = await response.read()
-            except aiohttp.client_exceptions.ClientPayloadError:
-                response = await self.session.get(url)
-                continue
-            has_payload_error = False
-
-        return {"response": response, "binary_content": binary_content}
-
-    async def _get_content_file_save(self, **dic_args):
-        dic_content = await self._get_binary_content(dic_args["resource_url"])
-        await self.save_files(
-            binary_content=dic_content["binary_content"],
-            file_url=str(dic_content["response"].url),
-            resource_type=dic_args["resource_type"],
-            content_type=dic_content["response"].content_type,
-            folder_path=dic_args["folder_path"],
-            filename=dic_args["filename"],
-        )
-
-    async def _get_data(self, url, payload) -> dict:
+    async def post_for_data(self, url, payload) -> dict:
         """Post the provided payload and returns the useful content
         of the response request."""
-        request = await self.session.post(url, json=payload)
-        data = json.loads(bytes.decode(await request.read()))[0]["data"]
+        async with self.session.post(url, json=payload) as response:
+            data = json.loads(bytes.decode(await response.read()))[0]["data"]
         return data
 
-    async def _get_topics_data(
+    async def post_for_topic_data(
         self, url, course_id, course_name
     ) -> tuple[str, dict]:
         """Post the payload matching the course_id provided
         to get the topics data related to the course_id."""
-        topics_data = await self._get_data(url, Payload.topics(course_id))
+        topics_data = await self.post_for_data(url, Payload.topics(course_id))
         data = json.loads(topics_data)
         return {"course_name": course_name, "data": data}
 
@@ -90,90 +62,38 @@ class AmeticeBot:
         credentials given in the class attributes
         - return True if login succeeded.
         - return False if login failed."""
-        resp_login = await self.session.post(
+        async with self.session.post(
             login_url, data=Payload.login(self.username, self.password)
-        )
-        if (
-            resp_login.status == 401
-            or len(self.password) == 0
-            or len(self.username) == 0
-        ):
-            return False
-        return True
+        ) as response:
+            if (
+                response.status == 401
+                or len(self.password) == 0
+                or len(self.username) == 0
+            ):
+                return False
+            return True
 
     async def get_session_key(self) -> int:
         """Method to get the session key delivered
         by ametice once connected."""
-        resp_my = await self.session.get(URL.AMETICE)
-        content = await resp_my.read()
-        soup = BeautifulSoup(bytes.decode(content), features="html.parser")
-        data = soup.find_all("script")[1].string
-        string_js_variable = RegexPatterns.JS_VARIABLE.search(data).group(1)
-        dic_js_variable = json.loads(string_js_variable)
-        sesskey = dic_js_variable["sesskey"]
+        async with self.session.get(URL.AMETICE) as response:
+            content = await response.read()
+            soup = BeautifulSoup(bytes.decode(content), features="html.parser")
+            data = soup.find_all("script")[1].string
+            string_js_variable = RegexPatterns.JS_VARIABLE.search(data).group(
+                1
+            )
+            dic_js_variable = json.loads(string_js_variable)
+            sesskey = dic_js_variable["sesskey"]
+            return sesskey
 
-        return sesskey
-
-    async def get_table_courses_data(self) -> dict:
+    async def post_for_table_courses_data(self) -> dict:
         """Method to get the informations related
         to the courses the student follows."""
-        table_courses_data = await self._get_data(
+        table_courses_data = await self.post_for_data(
             URL.course(self.session_key), Payload.COURSES
         )
         return table_courses_data
-
-    async def get_table_topics_data(self, courses_info) -> list[dict]:
-        """Method to get the data related
-        to the topics of the courses the student follows."""
-        url_get_topics = URL.topics(self.session_key)
-        list_tasks = []
-        for course_info in courses_info:
-            current_course_name = course_info["fullname"]
-            current_course_id = course_info["id"]
-            list_tasks.append(
-                asyncio.create_task(
-                    self._get_topics_data(
-                        url_get_topics, current_course_id, current_course_name
-                    )
-                )
-            )
-        return await asyncio.gather(*list_tasks)
-
-    async def save_files(self, **dic_args):
-        """Save a file by creating necessary folders."""
-        filename = dic_args["filename"]
-        folder_path = dic_args["folder_path"]
-
-        parsed = urlparse(dic_args["file_url"])
-        extension = os.path.splitext(parsed.path)[1]
-        if len(extension) == 0:
-            extension = guess_extension(dic_args["content_type"])
-            if extension is None:
-                extension = ""
-
-        if os.path.exists(dic_args["folder_path"]):
-            nb_same_filename = get_nb_origin_same_filename(
-                folder_path, filename
-            )
-            if nb_same_filename > 0:
-                filename = f"{filename}_{nb_same_filename}"
-
-        os.makedirs(folder_path, exist_ok=True)
-        if dic_args["resource_type"] == "url":
-            extension = ".txt"
-            writing_mode = "w"
-            content_key = "file_url"
-
-        else:
-            if dic_args["resource_type"] == "folder":
-                extension = ".zip"
-            writing_mode = "wb"
-            content_key = "binary_content"
-
-        async with aiofiles.open(
-            f"{folder_path}/{filename}{extension}", mode=writing_mode
-        ) as file:
-            await file.write(dic_args[content_key])
 
     def get_classified_cm_id(self, list_topics) -> dict:
         dic_cm_id_topic = {}
@@ -190,32 +110,50 @@ class AmeticeBot:
             )
         return dic_cm_id_topic
 
-    def create_download_task(
-        self, resource_type, dic_topic_info, dic_cm_id_topic, dic_cm
-    ):
-        resource_url = self.get_resource_url(
-            resource_type, dic_cm["url"], dic_cm["id"]
-        )
-
-        topic_name = dic_cm_id_topic[dic_cm["id"]]
-        filename = dic_cm["name"]
-        fullname = dic_topic_info["course_name"]
-        school_year = RegexPatterns.SCHOOL_YEAR_REGEX.search(fullname).group(0)
+    def get_cm_folder_path(self, course_name, topic_name):
+        school_year = self.dic_course_school_year[course_name]
         folder_path = os.path.join(
             "Fichiers_Ametice",
             get_valid_filename(school_year),
-            get_valid_filename(fullname),
+            get_valid_filename(course_name),
             get_valid_filename(topic_name),
         )
+        return folder_path
 
-        return asyncio.create_task(
-            self._get_content_file_save(
-                resource_url=resource_url,
-                resource_type=resource_type,
-                folder_path=folder_path,
-                filename=get_valid_filename(filename),
+    async def download_file(
+        self, resource_url, resource_type, folder_path, filename
+    ):
+        async with self.session.get(resource_url) as response:
+            file_url = str(response.url)
+            file_content_type = response.content_type
+            extension = get_file_extension(
+                file_url, file_content_type, resource_type
             )
-        )
+            filename_nb = get_filename_nb(folder_path, filename)
+            os.makedirs(folder_path, exist_ok=True)
+            if extension == ".txt":
+                async with aiofiles.open(
+                    f"{folder_path}/{filename}{extension}", mode="w"
+                ) as file:
+                    await file.write(file_url)
+                return
+
+            async with aiofiles.open(
+                f"{folder_path}/{filename_nb}{extension}", mode="wb"
+            ) as file:
+                async for chunk in response.content.iter_chunked(1024):
+                    await file.write(chunk)
+                    if self.show_messages:
+                        self.callback_download_file(folder_path)
+
+    def callback_download_file(self, folder_path):
+        list_folders = folder_path.split("/")
+        course_name = list_folders[-2]
+        self.dic_course_downloaded_cm[course_name] -= 1
+        if self.dic_course_downloaded_cm[course_name] == 0:
+            display_message(
+                f"Le cours '{course_name}' a été téléchargé avec succès."
+            )
 
     def get_resource_type(self, url):
         return RegexPatterns.RESOURCE_TYPE.search(url).group(1)
@@ -247,42 +185,70 @@ class AmeticeBot:
         display_message("Connecté.", self.show_messages)
         self.session_key = await self.get_session_key()
         display_message("Clé de session Ametice obtenue.", self.show_messages)
-        display_message(
-            "Récupération et téléchargement des cours...", self.show_messages
-        )
+        display_message("Téléchargement des cours...", self.show_messages)
         deb = time()
-        table_courses_data = (await self.get_table_courses_data())["courses"]
-        table_topics_data = await self.get_table_topics_data(
-            table_courses_data
-        )
-        list_tasks = []
 
-        for dic_topic_info in table_topics_data:
-            table_cms = dic_topic_info["data"]["cm"]
-            dic_cm_id_topic = self.get_classified_cm_id(
-                list_topics=dic_topic_info["data"]["section"]
+        table_courses = (await self.post_for_table_courses_data())["courses"]
+        list_tasks_topics = []
+        for dic_course in table_courses:
+            course_name = get_valid_filename(dic_course["fullname"])
+            course_id = dic_course["id"]
+            list_tasks_topics.append(
+                asyncio.create_task(
+                    self.post_for_topic_data(
+                        URL.topics(self.session_key),
+                        course_id,
+                        course_name,
+                    )
+                )
+            )
+            start_date_timestamp = dic_course["startdate"]
+            beg_school_year = get_beg_school_year(start_date_timestamp)
+            self.dic_course_school_year[course_name] = (
+                f"{beg_school_year}-{beg_school_year+1}"
             )
 
+        table_topics = await asyncio.gather(*list_tasks_topics)
+        list_tasks = []
+        for dic_topic in table_topics:
+            table_cms = dic_topic["data"]["cm"]
+            # list_sections = dic_topic["data"]["course"]["sectionlist"]
+            dic_cm_id_topic = self.get_classified_cm_id(
+                list_topics=dic_topic["data"]["section"]
+            )
+            course_name = dic_topic["course_name"]
+            self.dic_course_downloaded_cm[course_name] = len(table_cms)
             for dic_cm in table_cms:
+                topic_name = dic_cm_id_topic[dic_cm["id"]]
+                folder_path = self.get_cm_folder_path(
+                    course_name,
+                    topic_name,
+                )
                 if "url" not in dic_cm:
+                    self.callback_download_file(folder_path)
                     continue
+
                 resource_type = self.get_resource_type(dic_cm["url"])
-
                 if resource_type not in LIST_TREATED_TYPES:
+                    self.callback_download_file(folder_path)
                     continue
 
-                task = self.create_download_task(
-                    resource_type, dic_topic_info, dic_cm_id_topic, dic_cm
+                resource_url = self.get_resource_url(
+                    resource_type, dic_cm["url"], dic_cm["id"]
                 )
 
-                if task is None:
-                    continue
+                filename = get_valid_filename(dic_cm["name"])
+                task = asyncio.create_task(
+                    self.download_file(
+                        resource_url, resource_type, folder_path, filename
+                    ),
+                )
 
                 list_tasks.append(task)
-
         await asyncio.gather(*list_tasks)
         display_message(
-            "Téléchargement terminé en" f" {round(time() - deb, 1)} secondes."
+            "Téléchargement terminé en" f" {round(time() - deb, 1)} secondes.",
+            self.show_messages,
         )
 
 
@@ -297,6 +263,12 @@ async def main():
     ) as session:
         bot = AmeticeBot(session, username, password, show_messages=True)
         await bot.download_all_documents()
+        # await bot.login()
+        # async with bot.session.get(
+        #     "https://ametice.univ-amu.fr/mod/label/label.php/?id=3457106&redirect=1",
+        #     allow_redirects=False,
+        # ) as response:
+        #     print(await response.read())
 
 
 if __name__ == "__main__":

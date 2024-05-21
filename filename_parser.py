@@ -1,10 +1,14 @@
 """Module which contains functions which parse filenames
 """
+
 from mimetypes import guess_type
 import unicodedata
 import os
 import re
 from constants import RegexPatterns
+from urllib.parse import urlparse
+from mimetypes import guess_extension
+
 
 def get_valid_filename(filename):
     """
@@ -19,7 +23,9 @@ def get_valid_filename(filename):
             filename = tuple_before_after[0]
 
     valid_filename = str(filename).strip().replace(" ", "_")
-    valid_filename = RegexPatterns.FILENAME_FORBIDDEN_CHARS.sub("", valid_filename)
+    valid_filename = RegexPatterns.FILENAME_FORBIDDEN_CHARS.sub(
+        "", valid_filename
+    )
     valid_filename = unicodedata.normalize("NFKD", valid_filename)
     valid_filename = "".join(
         [c for c in valid_filename if not unicodedata.combining(c)]
@@ -45,3 +51,27 @@ def get_nb_origin_same_filename(folder_path, filename):
     pattern = rf"{filename}(_\d+)?"
     list_similar = [f for f in list_files if re.match(pattern, f)]
     return len(list_similar)
+
+
+def get_filename_nb(folder_path, filename):
+    filename_nb = filename
+    if os.path.exists(folder_path):
+        nb_same_filename = get_nb_origin_same_filename(folder_path, filename)
+        if nb_same_filename > 0:
+            filename_nb = f"{filename}_{nb_same_filename}"
+    return filename_nb
+
+
+def get_file_extension(file_url, file_content_type, resource_type):
+    if resource_type == "url":
+        extension = ".txt"
+    elif resource_type == "folder":
+        extension = ".zip"
+    else:
+        parsed = urlparse(file_url)
+        extension = os.path.splitext(parsed.path)[1]
+        if len(extension) == 0:
+            extension = guess_extension(file_content_type)
+            if extension is None:
+                extension = ""
+    return extension

@@ -3,8 +3,9 @@ There are also variable strings defined in
 the classes Payload and URL used for the bot."""
 
 import re
-import check_dir  # pylint:disable=W0611:unused-import
+from checks import check_cwd
 
+check_cwd()
 
 LIST_TYPES = ["assign", "folder", "resource", "url", "quiz", "choice", "forum"]
 LIST_TREATED_TYPES = ["folder", "resource", "url"]
@@ -114,5 +115,4 @@ class RegexPatterns:
     RESOURCE_TYPE = re.compile(
         rf"https://ametice\.univ-amu\.fr/mod/(.*)/view\.php\?id=[0-9]+"
     )
-    SCHOOL_YEAR_REGEX = re.compile(r"\[\d+\-\d+\]")
     FILENAME_FORBIDDEN_CHARS = re.compile(r"(?u)[^-\w.]")

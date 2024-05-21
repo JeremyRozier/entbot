@@ -5,9 +5,10 @@ import os
 import subprocess
 import sys
 
+
 def check_cwd():
     """
-    Ensures that the user has a correct 
+    Ensures that the user has a correct
     current working directory to avoid any issues
     with reading files using relative paths.
     """
@@ -20,6 +21,7 @@ def check_cwd():
     if current_last_folder != file_last_folder:
         os.chdir(directory_file_path)
 
+
 def check_dependencies():
     """
     Ensures necessary dependencies are downloaded
@@ -30,7 +32,9 @@ def check_dependencies():
     except ModuleNotFoundError:
         q = input("aiohttp est manquant, veux tu l'installer ? [y/n] : ")
         if q.lower() == "y":
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "aiohttp"])
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", "aiohttp"]
+            )
         else:
             print("Abandon.")
             sys.exit()
@@ -40,7 +44,9 @@ def check_dependencies():
     except ModuleNotFoundError:
         q = input("aiofiles est manquant, veux tu l'installer ? [y/n] : ")
         if q.lower() == "y":
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "aiofiles"])
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", "aiofiles"]
+            )
         else:
             print("Abandon.")
             sys.exit()
@@ -50,8 +56,9 @@ def check_dependencies():
     except ModuleNotFoundError:
         q = input("bs4 est manquant, veux tu l'installer ? [y/n] : ")
         if q.lower() == "y":
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "bs4"])
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", "bs4"]
+            )
         else:
             print("Abandon.")
             sys.exit()
-

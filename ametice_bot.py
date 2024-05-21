@@ -136,15 +136,15 @@ class AmeticeBot:
                     f"{folder_path}/{filename}{extension}", mode="w"
                 ) as file:
                     await file.write(file_url)
-                return
+            else:
+                async with aiofiles.open(
+                    f"{folder_path}/{filename_nb}{extension}", mode="wb"
+                ) as file:
+                    async for chunk in response.content.iter_chunked(1024):
+                        await file.write(chunk)
 
-            async with aiofiles.open(
-                f"{folder_path}/{filename_nb}{extension}", mode="wb"
-            ) as file:
-                async for chunk in response.content.iter_chunked(1024):
-                    await file.write(chunk)
-                    if self.show_messages:
-                        self.callback_download_file(folder_path)
+        if self.show_messages:
+            self.callback_download_file(folder_path)
 
     def callback_download_file(self, folder_path):
         list_folders = folder_path.split("/")

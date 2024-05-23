@@ -7,8 +7,8 @@ from checks import check_cwd
 
 check_cwd()
 
-LIST_TYPES = ["assign", "folder", "resource", "url", "quiz", "choice", "forum"]
-LIST_TREATED_TYPES = ["folder", "resource", "url"]
+LIST_MODULES = ["assign", "folder", "resource", "url", "quiz", "choice", "forum"]
+TUPLE_TREATED_MODULES = ["folder", "resource", "url", "quiz"]
 
 with open("execution_code.txt", "r", encoding="utf-8") as file:
     EXECUTION_CODE = file.read()
@@ -42,13 +42,30 @@ class URL:
         )
 
     @staticmethod
-    def folder(cm_id):
-        """Method to get the url of a folder with
-        a course module id"""
-        return (
-            "https://ametice.univ-amu.fr/mod/"
-            f"folder/download_folder.php?id={cm_id}"
-        )
+    def element(cm_id, cm_module):
+        """Method to get the url redirection of a course module with its
+        id and module name
+
+        Args:
+            - cm_id (str): The course id we want to get the url from.
+            - cm_module (str): The module name associated to the course
+            with id cm_id.
+
+        Returns (str): The url redirecting to the file associated to the
+        course module id.
+        """
+
+        if cm_module == "folder":
+            cm_url = (
+                "https://ametice.univ-amu.fr/mod/"
+                f"folder/download_folder.php?id={cm_id}"
+            )
+        else:
+            cm_url = (
+                "https://ametice.univ-amu.fr/mod/"
+                f"{cm_module}/view.php?id={cm_id}&redirect=1"
+            )
+        return cm_url
 
 
 class Payload:
@@ -112,7 +129,5 @@ class RegexPatterns:
     TIMELINE_URL = r"\"(.*)\""
     URL_HEX_VALUES = r"\\x([0-9a-fA-F]{2})"
     JS_VARIABLE = re.compile(r"M\.cfg = ([^;]*)")
-    RESOURCE_TYPE = re.compile(
-        rf"https://ametice\.univ-amu\.fr/mod/(.*)/view\.php\?id=[0-9]+"
-    )
     FILENAME_FORBIDDEN_CHARS = re.compile(r"(?u)[^-\w.]")
+    SCHOOL_YEAR_REGEX = re.compile(r"\d+\-\d+")

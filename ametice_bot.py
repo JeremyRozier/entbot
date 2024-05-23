@@ -1,10 +1,12 @@
-"""Module which contains the whole code to make the bot work
-in the class AmeticeBot."""
+"""File which contains the whole code to make the bot work
+in the class AmeticeBot.
+"""
 
 import asyncio
 import json
 from time import time
 import os
+import logging
 import aiohttp
 import aiofiles
 from bs4 import BeautifulSoup
@@ -21,7 +23,6 @@ from filename_parser import (
     get_file_extension,
     get_school_year,
 )
-import logging
 from logging_config import display_message
 from dotenv import load_dotenv
 
@@ -69,7 +70,7 @@ class AmeticeBot:
         self.dic_course_downloaded_cm = {}
         self.dic_course_school_year = {}
         self.session_key = ""
-        self.semaphore = asyncio.Semaphore(max_concurrent_requests)
+        self.sephamore_requests = asyncio.Semaphore(max_concurrent_requests)
 
     async def post_for_data(self, url: str, payload: dict) -> list[dict]:
         """Post the provided payload and returns the useful content
@@ -233,7 +234,7 @@ class AmeticeBot:
         has_error = True
         while has_error:
             try:
-                async with self.semaphore:
+                async with self.sephamore_requests:
                     await self.download_file(
                         cm_url, cm_module, folder_path, filename
                     )

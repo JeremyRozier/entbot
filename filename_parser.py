@@ -8,6 +8,7 @@ import re
 from constants import RegexPatterns
 from urllib.parse import urlparse
 from mimetypes import guess_extension
+from timestamp_functions import get_beg_school_year
 
 
 def get_valid_filename(filename):
@@ -62,16 +63,25 @@ def get_filename_nb(folder_path, filename):
     return filename_nb
 
 
-def get_file_extension(file_url, file_content_type, resource_type):
-    if resource_type == "url":
-        extension = ".txt"
-    elif resource_type == "folder":
+def get_file_extension(file_url, file_content_type, cm_module):
+    if cm_module == "folder":
         extension = ".zip"
-    else:
+    elif cm_module == "resource":
         parsed = urlparse(file_url)
         extension = os.path.splitext(parsed.path)[1]
         if len(extension) == 0:
             extension = guess_extension(file_content_type)
             if extension is None:
                 extension = ""
+    else:
+        extension = ".txt"
     return extension
+
+
+def get_school_year(course_name: str, start_date_timestamp: int) -> str:
+    match_school_year = RegexPatterns.SCHOOL_YEAR_REGEX.search(course_name)
+    if match_school_year is not None:
+        return match_school_year.group(0)
+    beg_school_year = get_beg_school_year(start_date_timestamp)
+    end_school_year = beg_school_year + 1
+    return f"{str(beg_school_year)[-2:]}-{str(end_school_year)[-2:]}"

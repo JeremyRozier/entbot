@@ -6,22 +6,22 @@ from checks import check_cwd, check_dependencies
 check_dependencies()
 check_cwd()
 
-import asyncio
-import aiohttp
-from getpass import getpass
 from ametice_bot import AmeticeBot
 from constants import Headers
+import aiohttp
+import asyncio
+from getpass import getpass
 from logging_config import display_message
 
 
 async def download(username, password):
     async with aiohttp.ClientSession(
         headers=Headers.LOGIN_HEADERS,
-        connector=aiohttp.TCPConnector(force_close=True, limit=50),
+        connector=aiohttp.TCPConnector(force_close=True),
         trust_env=True,
     ) as session:
         bot = AmeticeBot(session, username, password, show_messages=True)
-        await bot.download_all_documents()
+        await bot.download_all_files()
 
 
 display_message(

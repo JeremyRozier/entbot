@@ -59,7 +59,7 @@ class AmeticeBot:
             the class asyncio.Semaphore, that, in this program, is used to indicate
             how many requests, at most, can be made concurrently to avoid
             unintentional DDOS attacks.
-            The default value, 20, is fine-tuned.
+            The default value, 30, is fine-tuned.
 
         Returns: None
         """

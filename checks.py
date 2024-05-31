@@ -27,9 +27,7 @@ def check_dependencies():
     Ensures necessary dependencies are downloaded
     to make the bots work.
     """
-    try:
-        import aiohttp
-    except ModuleNotFoundError:
+    if "aiohttp" in sys.modules:
         q = input("aiohttp est manquant, veux tu l'installer ? [y/n] : ")
         if q.lower() == "y":
             subprocess.check_call(
@@ -39,9 +37,7 @@ def check_dependencies():
             print("Abandon.")
             sys.exit()
 
-    try:
-        import aiofiles
-    except ModuleNotFoundError:
+    if "aiofiles" in sys.modules:
         q = input("aiofiles est manquant, veux tu l'installer ? [y/n] : ")
         if q.lower() == "y":
             subprocess.check_call(
@@ -51,9 +47,7 @@ def check_dependencies():
             print("Abandon.")
             sys.exit()
 
-    try:
-        import bs4
-    except ModuleNotFoundError:
+    if "bs4" in sys.modules:
         q = input("bs4 est manquant, veux tu l'installer ? [y/n] : ")
         if q.lower() == "y":
             subprocess.check_call(

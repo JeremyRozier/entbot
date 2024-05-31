@@ -39,7 +39,7 @@ class AmeticeBot:
         username: str,
         password: str,
         show_messages=False,
-        max_concurrent_requests=20,
+        max_concurrent_requests=30,
     ) -> None:
         """Constructor of AmeticeBot.
 
@@ -131,7 +131,9 @@ class AmeticeBot:
                 or len(self.username) == 0
             ):
                 return False
-            return True
+
+        self.session_key = await self.get_session_key()
+        return True
 
     async def get_session_key(self) -> str:
         """Method to get the session key delivered
@@ -240,7 +242,11 @@ class AmeticeBot:
                     )
             except aiohttp.ClientConnectorError:
                 continue
+            except aiohttp.ClientPayloadError:
+                continue
+
             has_error = False
+
         if self.show_messages:
             self.callback_download_file(course_id, course_name)
 
@@ -266,9 +272,9 @@ class AmeticeBot:
             )
             filename_nb = get_filename_nb(folder_path, filename)
             os.makedirs(folder_path, exist_ok=True)
-            if extension == ".txt":
+            if extension == "":
                 async with aiofiles.open(
-                    f"{folder_path}/{filename_nb}{extension}", mode="w"
+                    f"{folder_path}/{filename_nb}.txt", mode="w"
                 ) as file:
                     await file.write(file_url)
             else:
@@ -312,9 +318,9 @@ class AmeticeBot:
                 logging.ERROR,
             )
             return
-        display_message("Connecté.", self.show_messages)
-        self.session_key = await self.get_session_key()
-        display_message("Clé de session Ametice obtenue.", self.show_messages)
+        display_message(
+            "Connecté et clé de session Ametice obtenue.", self.show_messages
+        )
         display_message("Téléchargement des cours...", self.show_messages)
         deb = time()
 

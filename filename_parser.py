@@ -90,20 +90,22 @@ def get_file_extension(
         got in the response of a get request.
         - cm_module (str): The module name of the file we want to save.
 
-    Returns (str): The extension of the file.
+    Returns (str): The extension of the file. If the extension could not be found,
+    returns the empty string.
     Example : ".txt".
     """
     if cm_module == "folder":
         extension = ".zip"
-    elif cm_module == "resource":
-        parsed = urlparse(file_url)
-        extension = os.path.splitext(parsed.path)[1]
-        if len(extension) == 0:
-            extension = guess_extension(file_content_type)
-            if extension is None:
-                extension = ""
+    elif cm_module == "quiz":
+        extension = ""
     else:
-        extension = ".txt"
+        extension = guess_extension(file_content_type)
+        if extension is None or extension == ".html":
+            parsed = urlparse(file_url)
+            extension = os.path.splitext(parsed.path)[1].lower()
+            if len(extension) == 0:
+                extension = ""
+
     return extension
 
 

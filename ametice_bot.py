@@ -393,6 +393,7 @@ async def main():
     async with aiohttp.ClientSession(
         headers=Headers.LOGIN_HEADERS,
         connector=aiohttp.TCPConnector(force_close=True),
+        timeout=aiohttp.ClientTimeout(total=600),
         trust_env=True,
     ) as session:
         bot = AmeticeBot(session, username, password, show_messages=True)

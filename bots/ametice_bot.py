@@ -17,14 +17,13 @@ from constants import (
     URL,
     TUPLE_TREATED_MODULES,
 )
-from filename_parser import (
+from tools.filename_parser import (
     get_valid_filename,
     get_filename_nb,
     get_file_extension,
     get_school_year,
 )
-from logging_config import display_message
-from dotenv import load_dotenv
+from tools.logging_config import display_message
 
 
 class AmeticeBot:
@@ -387,6 +386,8 @@ class AmeticeBot:
 
 
 async def main():
+    from dotenv import load_dotenv # pylint: disable=C0415:import-outside-toplevel
+
     load_dotenv()
     username = os.getenv("USERNAME")
     password = os.getenv("PASSWORD")

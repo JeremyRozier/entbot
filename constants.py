@@ -3,7 +3,7 @@ There are also variable strings defined in
 the classes Payload and URL used for the bot."""
 
 import re
-from checks import check_cwd
+from tools.checks import check_cwd
 
 check_cwd()
 

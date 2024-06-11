@@ -6,8 +6,8 @@ import unicodedata
 import os
 import re
 from urllib.parse import urlparse
-from constants import RegexPatterns
-from tools.timestamp_functions import get_beg_school_year
+from ..constants import RegexPatterns
+from .timestamp_functions import get_beg_school_year
 
 
 def get_valid_filename(filename) -> str:

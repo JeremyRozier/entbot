@@ -10,20 +10,22 @@ import logging
 import aiohttp
 import aiofiles
 from bs4 import BeautifulSoup
-from constants import (
+
+from ent_project.constants import (
     RegexPatterns,
     Headers,
     Payload,
     URL,
     TUPLE_TREATED_MODULES,
 )
-from tools.filename_parser import (
+from ent_project.tools.checks import check_cwd
+from ent_project.tools.filename_parser import (
     get_valid_filename,
     get_filename_nb,
     get_file_extension,
     get_school_year,
 )
-from tools.logging_config import display_message
+from ent_project.tools.logging_config import display_message
 
 
 class AmeticeBot:
@@ -402,4 +404,5 @@ async def main():
 
 
 if __name__ == "__main__":
+    check_cwd()
     asyncio.run(main())

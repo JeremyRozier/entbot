@@ -5,8 +5,9 @@ from mimetypes import guess_extension, guess_type
 import unicodedata
 import os
 import re
+import sys
 from urllib.parse import urlparse
-from ..constants import RegexPatterns
+from entbot.constants import RegexPatterns
 from .timestamp_functions import get_beg_school_year
 
 
@@ -108,6 +109,14 @@ def get_file_extension(
 
     return extension
 
+
+def turn_cwd_to_execution_dir():
+    """Turn the current directory into execution directory.
+
+    Returns: None
+    """
+    execution_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+    os.chdir(execution_dir)
 
 def get_school_year(course_name: str, start_date_timestamp: int) -> str:
     """Get the school year interval associated to the course.

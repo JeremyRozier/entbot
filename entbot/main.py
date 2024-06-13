@@ -1,21 +1,13 @@
 """File to execute to download all the files
 of an Ametice session"""
 
-from ent_project.tools.checks import check_cwd, check_module
-import os
-
-check_module("aiohttp")
-check_module("aiofiles")
-check_module("bs4")
-check_cwd()
-
-from ent_project.bots.ametice_bot import AmeticeBot
-from ent_project.constants import Headers
-import aiohttp
 import asyncio
 from getpass import getpass
-from ent_project.tools.logging_config import display_message
-
+import aiohttp
+from entbot.bots.ametice_bot import AmeticeBot
+from entbot.constants import Headers
+from entbot.tools.filename_parser import turn_cwd_to_execution_dir
+from entbot.tools.logging_config import display_message
 
 async def download(username, password):
     async with aiohttp.ClientSession(
@@ -47,4 +39,5 @@ password = getpass(prompt="Mot de passe : ")
 
 print("")
 
+turn_cwd_to_execution_dir()
 asyncio.run(download(username, password))

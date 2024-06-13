@@ -1,3 +1,5 @@
 __pycache__
 build/
 .env
+.ent_env
+entbot.egg-info

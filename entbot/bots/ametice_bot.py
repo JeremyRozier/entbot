@@ -4,28 +4,29 @@ in the class AmeticeBot.
 
 import asyncio
 import json
+import logging
 from time import time
 import os
-import logging
 import aiohttp
 import aiofiles
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 
-from ent_project.constants import (
+from entbot.constants import (
     RegexPatterns,
     Headers,
     Payload,
     URL,
     TUPLE_TREATED_MODULES,
 )
-from ent_project.tools.checks import check_cwd
-from ent_project.tools.filename_parser import (
+from entbot.tools.filename_parser import (
     get_valid_filename,
     get_filename_nb,
     get_file_extension,
     get_school_year,
+    turn_cwd_to_execution_dir,
 )
-from ent_project.tools.logging_config import display_message
+from entbot.tools.logging_config import display_message
 
 
 class AmeticeBot:
@@ -52,7 +53,7 @@ class AmeticeBot:
 
             - password (str): The password to sign in on the Aix Marseille website.
 
-            - show_messages (bool): Indicates if logs are showed in the terminal.
+            - show_messages (bool): Indicates whether logs are showed in the terminal or not.
             True : logs are showed.
             False : logs are hidden.
 
@@ -91,7 +92,7 @@ class AmeticeBot:
     async def post_for_topic_data(
         self, url: str, course_id: str, course_name
     ) -> dict:
-        """Post the payload matching the course_id provided
+        """Post the payload matching the provided course_id
         to get the topics data related to the course_id.
 
         Args:
@@ -219,6 +220,7 @@ class AmeticeBot:
         cm_module: str,
         folder_path: str,
         filename: str,
+        ssl = True,
     ) -> None:
         """Encapsulates the download_file method with a try and catch block
         for avoiding the aiohttp.ClientConnectorError error which was occurring randomly.
@@ -239,8 +241,11 @@ class AmeticeBot:
             try:
                 async with self.sephamore_requests:
                     await self.download_file(
-                        cm_url, cm_module, folder_path, filename
+                        cm_url, cm_module, folder_path, filename, ssl
                     )
+            except aiohttp.ClientConnectorCertificateError:
+                ssl=False
+                continue
             except aiohttp.ClientConnectorError:
                 continue
             except aiohttp.ClientPayloadError:
@@ -252,7 +257,7 @@ class AmeticeBot:
             self.callback_download_file(course_id, course_name)
 
     async def download_file(
-        self, cm_url, cm_module, folder_path, filename
+        self, cm_url, cm_module, folder_path, filename, ssl=True
     ) -> None:
         """Downloads the file stored at the url : cm_url under a filename and
         in a specified location given in arguments.
@@ -265,7 +270,7 @@ class AmeticeBot:
 
         Returns None
         """
-        async with self.session.get(cm_url) as response:
+        async with self.session.get(cm_url, ssl=ssl) as response:
             file_url = str(response.url)
             file_content_type = response.content_type
             extension = get_file_extension(
@@ -388,8 +393,6 @@ class AmeticeBot:
 
 
 async def main():
-    from dotenv import load_dotenv # pylint: disable=C0415:import-outside-toplevel
-
     load_dotenv()
     username = os.getenv("USERNAME")
     password = os.getenv("PASSWORD")
@@ -402,7 +405,6 @@ async def main():
         bot = AmeticeBot(session, username, password, show_messages=True)
         await bot.download_all_files()
 
-
 if __name__ == "__main__":
-    check_cwd()
+    turn_cwd_to_execution_dir()
     asyncio.run(main())

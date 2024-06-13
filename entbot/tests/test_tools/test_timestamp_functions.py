@@ -1,5 +1,5 @@
 from datetime import datetime
-from shared_code.tools.timestamp_functions import get_beg_school_year
+from entbot.tools.timestamp_functions import get_beg_school_year
 
 
 def test_get_beg_scholar_year():

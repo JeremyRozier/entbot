@@ -1,11 +1,11 @@
 """Functional tests for AmeticeBot class"""
 
 import os
-from ametice_bot import AmeticeBot
-from shared_code.tools.constants import Headers
 import aiohttp
 from dotenv import load_dotenv
 import pytest
+from entbot.bots.ametice_bot import AmeticeBot
+from entbot.constants import Headers
 
 load_dotenv()
 USERNAME = os.getenv("USERNAME")

@@ -225,6 +225,8 @@ class AmeticeBot:
             - cm_module (str): The type of the resource (see TUPLE_TREATED_TYPES).
             - folder_path (str): The path of folders where the file will be downloaded.
             - filename (str): The filename under which the file will be downloaded.
+            - ssl (bool): Indicates whether SSL is activated or not for the request
+            necessary to download the current file
 
         Returns None
         """

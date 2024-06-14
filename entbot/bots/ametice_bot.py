@@ -12,6 +12,7 @@ import aiofiles
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
+from entbot.bots.base import BaseBot
 from entbot.constants import (
     RegexPatterns,
     Headers,
@@ -31,7 +32,7 @@ from entbot.tools.filename_parser import (
 from entbot.tools.logging_config import display_message
 
 
-class AmeticeBot:
+class AmeticeBot(BaseBot):
     """This class is a bot for Ametice website.
     It is meant to get all the files from all the courses
     of an account with its credentials.
@@ -67,14 +68,12 @@ class AmeticeBot:
 
         Returns: None
         """
+        super().__init__(session, username, password)
         self.show_messages = show_messages
-        self.session = session
-        self.username = username
-        self.password = password
+        self.sephamore_requests = asyncio.Semaphore(max_concurrent_requests)
         self.dic_course_downloaded_cm = {}
         self.dic_course_school_year = {}
         self.session_key = ""
-        self.sephamore_requests = asyncio.Semaphore(max_concurrent_requests)
 
     async def post_for_data(self, url: str, payload: dict) -> list[dict]:
         """Post the provided payload and returns the useful content
@@ -114,9 +113,10 @@ class AmeticeBot:
         data = json.loads(topics_data)
         return {"course_name": course_name, "data": data}
 
-    async def login(self, login_url=URL.LOGIN) -> bool:
-        """Method to login with the
-        credentials given in the class attributes
+    async def login(self, login_url=URL.LOGIN):
+        """Method to login with the credentials given in the class attributes.
+        This method overrides the one in BaseBot to use it and then get
+        the session key for Ametice.
 
         Args:
             - login_url (str): The url of the service hosting Moodle.
@@ -126,18 +126,11 @@ class AmeticeBot:
             - True if login succeeded.
             - False if login failed.
         """
-        async with self.session.post(
-            login_url, data=Payload.login(self.username, self.password)
-        ) as response:
-            if (
-                response.status == 401
-                or len(self.password) == 0
-                or len(self.username) == 0
-            ):
-                return False
+        if await super().login(login_url):
+            self.session_key = await self.get_session_key()
+            return len(self.session_key) > 0
 
-        self.session_key = await self.get_session_key()
-        return True
+        return False
 
     async def get_session_key(self) -> str:
         """Method to get the session key delivered

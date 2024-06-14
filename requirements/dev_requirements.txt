@@ -1,0 +1,7 @@
+typeguard >= 4.3.0
+pytest
+isort
+black
+flake8
+mypy
+bandit

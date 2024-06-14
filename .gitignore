@@ -1,2 +1,8 @@
 __pycache__
+.DS_Store
+.env
+.entbot_env
+.pytest_cache
+.vscode
 build/
+entbot.egg-info

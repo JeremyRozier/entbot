@@ -19,7 +19,9 @@ from entbot.constants import (
     URL,
     TUPLE_TREATED_MODULES,
 )
+from entbot.tools.dic_operations import get_classified_cm_id
 from entbot.tools.filename_parser import (
+    get_cm_folder_path,
     get_valid_filename,
     get_filename_nb,
     get_file_extension,
@@ -166,52 +168,6 @@ class AmeticeBot:
         )
         return table_courses_data
 
-    def get_classified_cm_id(self, table_topics: list[dict]) -> dict[str, str]:
-        """Creates a dictionary that maps the course module ids
-        to the topic names associated.
-
-        Args:
-            - table_topics (list[dict]): The table containing
-            all the data of the followed topics.
-
-        Returns (dict): A dictionary that maps the course module ids
-        to the topic names associated.
-        """
-        dic_cm_id_topic = {}
-        for dic_topic in table_topics:
-            topic_name = dic_topic["title"]
-            list_cm_id = dic_topic["cmlist"]
-            dic_cm_id_topic.update(
-                dict(
-                    zip(
-                        list_cm_id,
-                        [topic_name for i in range(len(list_cm_id))],
-                    )
-                )
-            )
-        return dic_cm_id_topic
-
-    def get_cm_folder_path(
-        self, course_id: str, course_name: str, topic_name: str
-    ) -> str:
-        """Creates a folder path for the given
-        course name and topic name.
-
-        Args:
-            course_name (str): The course name used for making the path.
-            topic_name (str): The topic name used for making the path.
-
-        Returns (str): The folder path for the given arguments.
-        """
-        school_year = self.dic_course_school_year[course_id]
-        folder_path = os.path.join(
-            "Fichiers_Ametice",
-            get_valid_filename(school_year),
-            get_valid_filename(course_name),
-            get_valid_filename(topic_name),
-        )
-        return folder_path
-
     async def download_file_with_error_handling(
         self,
         course_id,
@@ -220,7 +176,7 @@ class AmeticeBot:
         cm_module: str,
         folder_path: str,
         filename: str,
-        ssl = True,
+        ssl=True,
     ) -> None:
         """Encapsulates the download_file method with a try and catch block
         for avoiding the aiohttp.ClientConnectorError error which was occurring randomly.
@@ -233,6 +189,8 @@ class AmeticeBot:
             - cm_module (str): The type of the resource (see TUPLE_TREATED_TYPES).
             - folder_path (str): The path of folders where the file will be downloaded.
             - filename (str): The filename under which the file will be downloaded.
+            - ssl (bool): Indicates whether SSL is activated or not for the request
+            necessary to download the current file
 
         Returns None
         """
@@ -244,7 +202,7 @@ class AmeticeBot:
                         cm_url, cm_module, folder_path, filename, ssl
                     )
             except aiohttp.ClientConnectorCertificateError:
-                ssl=False
+                ssl = False
                 continue
             except aiohttp.ClientConnectorError:
                 continue
@@ -353,16 +311,16 @@ class AmeticeBot:
             course_name = dic_topic["course_name"]
             course_id = dic_topic["data"]["course"]["id"]
             table_cms = dic_topic["data"]["cm"]
-            dic_cm_id_topic = self.get_classified_cm_id(
+            dic_cm_id_topic = get_classified_cm_id(
                 table_topics=dic_topic["data"]["section"]
             )
             self.dic_course_downloaded_cm[course_id] = len(table_cms)
             for dic_cm in table_cms:
                 topic_name = dic_cm_id_topic[dic_cm["id"]]
-                folder_path = self.get_cm_folder_path(
-                    course_id,
-                    course_name,
-                    topic_name,
+                folder_path = get_cm_folder_path(
+                    school_year=self.dic_course_school_year[course_id],
+                    course_name=course_name,
+                    topic_name=topic_name,
                 )
 
                 cm_module = dic_cm["module"]
@@ -404,6 +362,7 @@ async def main():
     ) as session:
         bot = AmeticeBot(session, username, password, show_messages=True)
         await bot.download_all_files()
+
 
 if __name__ == "__main__":
     turn_cwd_to_execution_dir()

@@ -1,4 +1,4 @@
-.PHONY: virtualenv install install-dev install-doc lint format test doc-serve run clean docker_clean prepare docker_terminal docker_run_gpu
+.PHONY: virtualenv install install_dev install-doc lint format test clean
 
 ### -------------------------- Installation -------------------------------- ###
 
@@ -6,8 +6,9 @@ NAME := entbot
 VIRTUALENV = virtualenv --python=python3.11.6
 
 PYTHON = $(VENV)/bin/python
-VENV := $(shell echo $${VIRTUAL_ENV-.ent_env})
+VENV := $(shell echo $${VIRTUAL_ENV-.entbot_env})
 INSTALL_STAMP := $(VENV)/.install.stamp
+STAMP_DEV := $(VENV)/.dev_env_installed.stamp
 
 print-%  : ; @echo $* = $($*)
 
@@ -16,7 +17,8 @@ help:
 	@echo "Please use 'make <target>' where <target> is one of"
 	@echo ""
 	@echo "  virtualenv  	   prepare virtual environment"
-	@echo "  install     	   install packages in requirements.txt"
+	@echo "  install     	   install the project in editable mode and its dependencies using the constraints in requirements.txt
+	@echo "  install_dev 	   install packages in dev_requirements.txt"
 	@echo "  clean       	   remove all temporary files and virtual environments"
 	@echo "  lint        	   run the code linters"
 	@echo "  format      	   reformat code"
@@ -29,14 +31,19 @@ $(PYTHON):
 	$(VIRTUALENV) $(VENV)
 
 install: $(INSTALL_STAMP)
-$(INSTALL_STAMP): $(PYTHON) setup.py requirements.txt
+$(INSTALL_STAMP): $(PYTHON) setup.py requirements/requirements.txt
 	$(VENV)/bin/pip install -U pip
-	$(VENV)/bin/pip install -Ue . -c requirements.txt
+	$(VENV)/bin/pip install -Ue . -c requirements/requirements.txt
 	touch $(INSTALL_STAMP)
+
+install_dev: $(INSTALL_STAMP) $(STAMP_DEV)
+$(STAMP_DEV): $(PYTHON) setup.py requirements/dev_requirements.txt
+	$(VENV)/bin/pip install -Ur requirements/dev_requirements.txt
+	touch $(STAMP_DEV)
 
 clean:
 	find . -type d -name "__pycache__" | xargs rm -rf {};
-	rm -rf $(VENV) $(INSTALL_STAMP) .coverage .mypy_cache .pytest_cache
+	rm -rf $(VENV) $(INSTALL_STAMP) $(STAMP_DEV) .coverage .mypy_cache .pytest_cache
 
 lint: 
 	$(VENV)/bin/isort --profile=black --lines-after-imports=2 --check-only $(NAME) --virtual-env=$(VENV)

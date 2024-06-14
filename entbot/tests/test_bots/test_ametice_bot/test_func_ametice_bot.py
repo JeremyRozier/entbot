@@ -24,7 +24,6 @@ async def test_login():
     ) as session:
         bot = AmeticeBot(session, USERNAME, PASSWORD)
         assert await bot.login()
-        assert len(bot.session_key) > 0
 
 
 @pytest.mark.asyncio

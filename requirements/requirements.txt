@@ -4,9 +4,4 @@ beautifulsoup4 >= 4.12.3
 pyinstaller >= 6.8.0
 pytest-asyncio >= 0.23.7
 python-dotenv >= 1.0.1
-pytest
-isort
-black
-flake8
-mypy
-bandit
+setuptools >= 70.0.0

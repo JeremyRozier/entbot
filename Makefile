@@ -10,19 +10,15 @@ VENV := $(shell echo $${VIRTUAL_ENV-.entbot_env})
 INSTALL_STAMP := $(VENV)/.install.stamp
 STAMP_DEV := $(VENV)/.dev_env_installed.stamp
 
-print-%  : ; @echo $* = $($*)
-
 .PHONY: help
 help:
 	@echo "Please use 'make <target>' where <target> is one of"
 	@echo ""
 	@echo "  virtualenv  	   prepare virtual environment"
-	@echo "  install     	   install the project in editable mode and its dependencies using the constraints in requirements.txt
+	@echo "  install     	   install the project in editable mode and its dependencies using the constraints in requirements.txt"
 	@echo "  install_dev 	   install packages in dev_requirements.txt"
-	@echo "  clean       	   remove all temporary files and virtual environments"
-	@echo "  lint        	   run the code linters"
-	@echo "  format      	   reformat code"
 	@echo "  test        	   run all the tests"
+	@echo "  clean       	   remove all temporary files and virtual environments"
 	@echo ""
 	@echo "Check the Makefile to know exactly what each <target> is doing."
 

@@ -1,20 +1,51 @@
-# Ametice Bot
+# ENT Bot
 
-## Introduction
+## Purpose
 
-Ametice Bot est un bot te permettant de télécharger en peu de temps tous les fichiers disponibles sur ton compte Ametice de façon ordonnée à l'aide
-de ton identifiant et de ton mot de passe que tu saisis en temps normal sur cette page :
+ENT Bot is a bot that logs into your AMU account and then either get the link of any timetables you are used to get on ADE service or download all the files, ordered in folders, available on your Ametice (based on the Moodle API) account.
 
-![Menu ENT](readme_assets/screenshot_ent.png)
+The credentials the programs require are the one you are used to enter on the following page :
 
-## Pourquoi Ametice Bot ?
+![Menu ENT](assets/readme_assets//screenshot_ent.png)
 
-Si tu en as marre de te rendre sur Ametice ou que tu veux tout simplement garder tous tes cours d'une année sur l'autre alors Ametice Bot est le programme qu'il te faut !
+# Quickstart
 
-## Comment ça marche ?
+## Requirements
 
-Si tu veux l'utiliser alors tu as juste à exécuter le fichier *main.py* et à saisir tes identifiants. Les fichiers seront stockés dans des dossiers que le programme crée (de la forme *Fichiers Ametice/[annee_debut:annee_fin]/UE/chapitres/fichiers*).
+Python 3.11.6 (the virtual environment will use this version)
 
-## Et dans les autres régions ?
+## Installation
 
-Si ton université utilise également moodle alors il suffit, dans le meilleur des cas, de modifier la méthode *login* de la classe AmeticeBot.
+First clone the library from your terminal and move to the cloned folder :
+
+```
+git clone https://github.com/JeremyRozier/entbot
+cd entbot/
+```
+
+### To install entbot, run:
+
+```
+make virtualenv
+
+source .entbot_env/bin/activate
+
+make install
+
+```
+
+### To install entbot for development, run:
+
+```
+make virtualenv
+
+source .entbot_env/bin/activate
+
+make install
+
+make install_dev
+
+make test
+```
+
+Note: Use `make help` to see the available commands and also check the content of `Makefile` to know exactly what each command is meant to do.

@@ -118,6 +118,7 @@ def turn_cwd_to_execution_dir():
     execution_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
     os.chdir(execution_dir)
 
+
 def get_school_year(course_name: str, start_date_timestamp: int) -> str:
     """Get the school year interval associated to the course.
 
@@ -135,3 +136,24 @@ def get_school_year(course_name: str, start_date_timestamp: int) -> str:
     beg_school_year = get_beg_school_year(start_date_timestamp)
     end_school_year = beg_school_year + 1
     return f"{str(beg_school_year)[-2:]}-{str(end_school_year)[-2:]}"
+
+
+def get_cm_folder_path(
+    school_year: str, course_name: str, topic_name: str
+) -> str:
+    """Creates a folder path for the given
+    course name and topic name.
+
+    Args:
+        course_name (str): The course name used for making the path.
+        topic_name (str): The topic name used for making the path.
+
+    Returns (str): The folder path for the given arguments.
+    """
+    folder_path = os.path.join(
+        "Fichiers_Ametice",
+        get_valid_filename(school_year),
+        get_valid_filename(course_name),
+        get_valid_filename(topic_name),
+    )
+    return folder_path

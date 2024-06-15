@@ -302,12 +302,12 @@ class AmeticeBot(BaseBot):
         table_topics_data = await asyncio.gather(*list_tasks_topics)
 
         list_tasks_download_file = []
-        for dic_topic in table_topics_data:
-            course_name = dic_topic["course_name"]
-            course_id = dic_topic["data"]["course"]["id"]
-            table_cms = dic_topic["data"]["cm"]
+        for dic_topic_data in table_topics_data:
+            course_name = dic_topic_data["course_name"]
+            course_id = dic_topic_data["data"]["course"]["id"]
+            table_cms = dic_topic_data["data"]["cm"]
             dic_cm_id_topic = get_classified_cm_id(
-                table_topics=dic_topic["data"]["section"]
+                table_topics=dic_topic_data["data"]["section"]
             )
             self.dic_course_downloaded_cm[course_id] = len(table_cms)
             for dic_cm in table_cms:

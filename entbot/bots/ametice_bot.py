@@ -299,10 +299,10 @@ class AmeticeBot(BaseBot):
             start_date_timestamp = dic_course["startdate"]
             school_year = get_school_year(course_name, start_date_timestamp)
             self.dic_course_school_year[course_id] = school_year
-        table_topics = await asyncio.gather(*list_tasks_topics)
+        table_topics_data = await asyncio.gather(*list_tasks_topics)
 
         list_tasks_download_file = []
-        for dic_topic in table_topics:
+        for dic_topic in table_topics_data:
             course_name = dic_topic["course_name"]
             course_id = dic_topic["data"]["course"]["id"]
             table_cms = dic_topic["data"]["cm"]

@@ -113,7 +113,7 @@ class AmeticeBot(BaseBot):
         data = json.loads(topics_data)
         return {"course_name": course_name, "data": data}
 
-    async def login(self, login_url=URL.LOGIN):
+    async def login(self, login_url=URL.ENT_LOGIN):
         """Method to login with the credentials given in the class attributes.
         This method overrides the one in BaseBot to use it and then get
         the session key for Ametice.

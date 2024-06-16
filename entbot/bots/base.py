@@ -19,7 +19,7 @@ class BaseBot:
         self.username = username
         self.password = password
 
-    async def login(self, login_url=URL.LOGIN) -> bool:
+    async def login(self, login_url=URL.ENT_LOGIN) -> bool:
         """Method to login with the
         credentials given in the class attributes
 

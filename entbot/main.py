@@ -7,9 +7,9 @@ import os
 import sys
 import aiohttp
 
-ABSOLUTE_ROOT_PATH = "".join(os.path.dirname(__file__).split("/")[:-1])
-if ABSOLUTE_ROOT_PATH not in sys.path:
-    sys.path.append('/path/to/your/package')
+ABSOLUTE_ROOT_PROJECT_PATH = "".join(os.path.dirname(__file__).split("/")[:-1])
+if ABSOLUTE_ROOT_PROJECT_PATH not in sys.path:
+    sys.path.append(ABSOLUTE_ROOT_PROJECT_PATH)
 
 # pylint: disable=wrong-import-position
 from entbot.bots.ametice_bot import AmeticeBot

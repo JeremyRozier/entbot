@@ -26,10 +26,12 @@ def get_valid_filename(filename) -> str:
     underscores; and removes anything that is not an alphanumeric, dash,
     underscore, or dot.
     """
-    if "." in filename:
+    while "." in filename:
         tuple_before_after = os.path.splitext(filename)
         if guess_type(tuple_before_after[1]) is not None:
             filename = tuple_before_after[0]
+        else:
+            filename = filename.replace(".", "")
 
     valid_filename = str(filename).strip().replace(" ", "_")
     valid_filename = RegexPatterns.FILENAME_FORBIDDEN_CHARS.sub(

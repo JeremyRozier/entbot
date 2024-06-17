@@ -7,6 +7,8 @@ import os
 import re
 import sys
 from urllib.parse import urlparse
+import aiofiles
+from aiohttp import ClientResponse
 from entbot.constants import RegexPatterns
 from .timestamp_functions import get_beg_school_year
 
@@ -138,6 +140,37 @@ def get_school_year(course_name: str, start_date_timestamp: int) -> str:
     beg_school_year = get_beg_school_year(start_date_timestamp)
     end_school_year = beg_school_year + 1
     return f"{str(beg_school_year)[-2:]}-{str(end_school_year)[-2:]}"
+
+
+async def write_with_error_handling(
+    path_with_filename: str,
+    content_to_write: str,
+):
+    try:
+        async with aiofiles.open(path_with_filename, mode="w") as file:
+            await file.write(content_to_write)
+    except FileNotFoundError:
+        nb_chars_above_limit = len(path_with_filename) - 260 + 1
+        async with aiofiles.open(
+            path_with_filename[:-nb_chars_above_limit], mode="w"
+        ) as file:
+            await file.write(content_to_write)
+
+
+async def write_binary_with_error_handling(
+    path_with_filename: str, content_to_write: ClientResponse
+):
+    try:
+        async with aiofiles.open(path_with_filename, mode="wb") as file:
+            async for chunk in content_to_write.content.iter_chunked(1024):
+                await file.write(chunk)
+    except FileNotFoundError:
+        nb_chars_above_limit = len(path_with_filename) - 260 + 1
+        async with aiofiles.open(
+            path_with_filename[:-nb_chars_above_limit], mode="wb"
+        ) as file:
+            async for chunk in content_to_write.content.iter_chunked(1024):
+                await file.write(chunk)
 
 
 def get_cm_folder_path(

@@ -7,7 +7,7 @@ import os
 import sys
 import aiohttp
 
-ABSOLUTE_ROOT_PROJECT_PATH = "".join(os.path.dirname(__file__).split("/")[:-1])
+ABSOLUTE_ROOT_PROJECT_PATH = "".join(os.path.dirname(__file__).split("/"))
 if ABSOLUTE_ROOT_PROJECT_PATH not in sys.path:
     sys.path.append(ABSOLUTE_ROOT_PROJECT_PATH)
 

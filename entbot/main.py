@@ -3,14 +3,22 @@ of an Ametice session"""
 
 import asyncio
 from getpass import getpass
+import os
+import sys
 import aiohttp
+
+ABSOLUTE_ROOT_PATH = "".join(os.path.dirname(__file__).split("/")[:-1])
+if ABSOLUTE_ROOT_PATH not in sys.path:
+    sys.path.append('/path/to/your/package')
+
+# pylint: disable=wrong-import-position
 from entbot.bots.ametice_bot import AmeticeBot
 from entbot.constants import Headers
 from entbot.tools.filename_parser import turn_cwd_to_execution_dir
 from entbot.tools.logging_config import display_message
 
 
-async def main(username: str, password: str):
+async def main():
     """The main function to execute for downloading all ametice files
     from the account associated to the given credentials.
 
@@ -20,6 +28,9 @@ async def main(username: str, password: str):
 
     Returns: None
     """
+    username = input("Nom d'utilisateur : ")
+    password = getpass(prompt="Mot de passe : ")
+    print("")
     async with aiohttp.ClientSession(
         headers=Headers.LOGIN_HEADERS,
         connector=aiohttp.TCPConnector(force_close=True),
@@ -44,10 +55,5 @@ display_message(
 
 print("")
 
-username = input("Nom d'utilisateur : ")
-password = getpass(prompt="Mot de passe : ")
-
-print("")
-
 turn_cwd_to_execution_dir()
-asyncio.run(main(username, password))
+asyncio.run(main())

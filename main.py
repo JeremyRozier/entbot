@@ -5,6 +5,15 @@ import asyncio
 from getpass import getpass
 import os
 import sys
+
+from user_functions import check_module
+
+check_module("aiohttp")
+check_module("aiofiles")
+check_module("bs4")
+
+# pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-order
 import aiohttp
 
 ABSOLUTE_ROOT_PROJECT_PATH = "".join(os.path.dirname(__file__).split("/"))

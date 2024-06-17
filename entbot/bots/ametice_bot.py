@@ -8,7 +8,6 @@ import logging
 from time import time
 import os
 import aiohttp
-import aiofiles
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
@@ -27,6 +26,8 @@ from entbot.tools.filename_parser import (
     get_filename_nb,
     get_file_extension,
     get_school_year,
+    write_binary_with_error_handling,
+    write_with_error_handling,
     turn_cwd_to_execution_dir,
 )
 from entbot.tools.logging_config import display_message
@@ -232,16 +233,21 @@ class AmeticeBot(BaseBot):
             filename_nb = get_filename_nb(folder_path, filename)
             os.makedirs(folder_path, exist_ok=True)
             if extension == "":
-                async with aiofiles.open(
-                    f"{folder_path}/{filename_nb}.txt", mode="w"
-                ) as file:
-                    await file.write(file_url)
+                absolute_path = os.path.abspath(
+                    f"{folder_path}/{filename_nb}.txt"
+                )
+                await write_with_error_handling(
+                    absolute_path,
+                    content_to_write=file_url,
+                )
             else:
-                async with aiofiles.open(
-                    f"{folder_path}/{filename_nb}{extension}", mode="wb"
-                ) as file:
-                    async for chunk in response.content.iter_chunked(1024):
-                        await file.write(chunk)
+                absolute_path = os.path.abspath(
+                    f"{folder_path}/{filename_nb}{extension}"
+                )
+                await write_binary_with_error_handling(
+                    absolute_path,
+                    content_to_write=response,
+                )
 
     def callback_download_file(self, course_id, course_name) -> None:
         """Updates the self.dic_course_downloaded_cm to know

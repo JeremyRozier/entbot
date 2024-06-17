@@ -45,7 +45,7 @@ def get_valid_filename(filename) -> str:
 def get_nb_origin_same_filename(folder_path: str, filename: str) -> int:
     """
     Returns for a given filename the number of files
-    already saved in te folder path which match with this pattern
+    already saved in the folder path which match with this pattern
     rf{filename}(_d+)?, or 0 if there aren't any conflicts.
 
     Args:

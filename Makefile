@@ -3,7 +3,7 @@
 ### -------------------------- Installation -------------------------------- ###
 
 NAME := entbot
-VIRTUALENV = virtualenv --python=python3.11.6
+VIRTUALENV = venv
 
 PYTHON = $(VENV)/bin/python
 VENV := $(shell echo $${VIRTUAL_ENV-.entbot_env})

@@ -9,7 +9,6 @@ from time import time
 import os
 import aiohttp
 from bs4 import BeautifulSoup
-from dotenv import load_dotenv
 
 from entbot.bots.base import BaseBot
 from entbot.constants import (
@@ -352,6 +351,8 @@ class AmeticeBot(BaseBot):
 
 
 async def main():
+    from dotenv import load_dotenv
+
     load_dotenv()
     username = os.getenv("USERNAME")
     password = os.getenv("PASSWORD")

@@ -12,12 +12,12 @@ setup(
         "aiofiles",
         "beautifulsoup4",
         "pytest-asyncio",
-        "python-dotenv",
         "pyinstaller",
         "setuptools",
     ],
     extras_require={
         "dev": [
+            "python-dotenv",
             "pytest",
             "isort",
             "black",

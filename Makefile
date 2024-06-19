@@ -39,7 +39,6 @@ $(STAMP_DEV): $(PYTHON) setup.py requirements/dev_requirements.txt
 
 clean:
 	find . -type d -name "__pycache__" | xargs rm -rf {};
-	rm -rf $(VENV) $(INSTALL_STAMP) $(STAMP_DEV) .coverage .mypy_cache .pytest_cache
 
 lint: 
 	$(VENV)/bin/isort --profile=black --lines-after-imports=2 --check-only $(NAME) --virtual-env=$(VENV)

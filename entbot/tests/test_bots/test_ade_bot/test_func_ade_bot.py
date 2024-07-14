@@ -5,13 +5,30 @@ import os
 import aiohttp
 from dotenv import load_dotenv
 import pytest
-from entbot.bots.ade_bot import ADEBot
+from entbot.bots import ENTBot
+from entbot.bots import ADEBot
 from entbot.constants import Headers
 
 
 load_dotenv()
 USERNAME = os.getenv("USERNAME")
 PASSWORD = os.getenv("PASSWORD")
+
+
+@pytest.mark.asyncio
+async def test_login_ade():
+    async with aiohttp.ClientSession(
+        headers=Headers.LOGIN_HEADERS,
+        connector=aiohttp.TCPConnector(force_close=True),
+        timeout=aiohttp.ClientTimeout(total=600),
+        trust_env=True,
+    ) as session:
+        bot = ADEBot(session, USERNAME, PASSWORD)
+        assert not await bot.login_ade()
+        ent_bot = ENTBot(session, USERNAME, PASSWORD)
+        assert await ent_bot.login()
+        ade_bot = ADEBot(session, USERNAME, PASSWORD)
+        assert await ade_bot.login_ade()
 
 
 @pytest.mark.asyncio
@@ -36,7 +53,7 @@ async def test_get_tree_ids_from_name():
     ) as session:
         bot = ADEBot(session, USERNAME, PASSWORD)
         await bot.login()
-        list_courses_id = await bot.get_tree_ids_from_name("S5 MPCI")
+        list_courses_id = await bot.get_tree_from_name("S5 MPCI")
         assert list_courses_id == [
             "-100",
             "-1",
@@ -64,6 +81,34 @@ async def test_get_semester_id():
 
 
 @pytest.mark.asyncio
+async def test_get_groups_from_semester():
+    async with aiohttp.ClientSession(
+        headers=Headers.LOGIN_HEADERS,
+        connector=aiohttp.TCPConnector(force_close=True),
+        timeout=aiohttp.ClientTimeout(total=600),
+        trust_env=True,
+    ) as session:
+        bot = ADEBot(session, USERNAME, PASSWORD)
+        await bot.login()
+        list_groups_id_name = await bot.get_groups_from_semester(3)
+        assert list_groups_id_name == [
+            ("1714", "S3 MPCI"),
+            ("1880", "GR1"),
+            ("1895", "GR2"),
+            ("2455", "GR3"),
+            ("1850", "GR4"),
+            ("1797", "GR5"),
+            ("1783", "GR6"),
+            ("2469", "GR7"),
+            ("1715", "GR8"),
+            ("131179", "GR9"),
+            ("2189", "Gr10"),
+            ("9682", "Gr11"),
+            ("9781", "Gr12"),
+        ]
+
+
+@pytest.mark.asyncio
 async def test_get_group_id():
     async with aiohttp.ClientSession(
         headers=Headers.LOGIN_HEADERS,
@@ -73,8 +118,8 @@ async def test_get_group_id():
     ) as session:
         bot = ADEBot(session, USERNAME, PASSWORD)
         await bot.login()
-        group_id = await bot.get_group_id(3, 2)
-        assert group_id == "1895"
+        group_name_id = await bot.get_group_name_id(3, 2)
+        assert group_name_id == ("1895", "GR2")
 
 
 @pytest.mark.asyncio

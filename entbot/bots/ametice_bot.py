@@ -4,13 +4,11 @@ in the class AmeticeBot.
 
 import asyncio
 import json
-import logging
-from time import time
 import os
 import aiohttp
 from bs4 import BeautifulSoup
 
-from entbot.bots.base import BaseBot
+from entbot.bots.ent_bot import ENTBot
 from entbot.constants import (
     RegexPatterns,
     Headers,
@@ -32,7 +30,7 @@ from entbot.tools.filename_parser import (
 from entbot.tools.logging_config import display_message
 
 
-class AmeticeBot(BaseBot):
+class AmeticeBot(ENTBot):
     """This class is a bot for Ametice website.
     It is meant to get all the files from all the courses
     of an account with its credentials.
@@ -68,8 +66,7 @@ class AmeticeBot(BaseBot):
 
         Returns: None
         """
-        super().__init__(session, username, password)
-        self.show_messages = show_messages
+        super().__init__(session, username, password, show_messages)
         self.sephamore_requests = asyncio.Semaphore(max_concurrent_requests)
         self.dic_course_downloaded_cm = {}
         self.dic_course_school_year = {}
@@ -113,6 +110,17 @@ class AmeticeBot(BaseBot):
         data = json.loads(topics_data)
         return {"course_name": course_name, "data": data}
 
+    async def load_ametice_session(self, url_ametice=URL.AMETICE):
+        """Method to get the session key and store it
+        in the session_key attribute
+
+        Returns (bool):
+            - True if the operation succeeded.
+            - False if the operation failed.
+        """
+        self.session_key = await self.get_session_key(url_ametice)
+        return len(self.session_key) > 0
+
     async def login(self, login_url=URL.ENT_LOGIN):
         """Method to login with the credentials given in the class attributes.
         This method overrides the one in BaseBot to use it and then get
@@ -126,19 +134,19 @@ class AmeticeBot(BaseBot):
             - True if login succeeded.
             - False if login failed.
         """
-        if await super().login(login_url):
-            self.session_key = await self.get_session_key()
-            return len(self.session_key) > 0
+        if not self.is_logged_in_ent:
+            if await super().login(login_url):
+                return await self.load_ametice_session()
 
         return False
 
-    async def get_session_key(self) -> str:
+    async def get_session_key(self, url_ametice=URL.AMETICE) -> str:
         """Method to get the session key delivered
         by ametice once connected.
 
         Returns (str): The key created by Ametice
         for the session we made."""
-        async with self.session.get(URL.AMETICE) as response:
+        async with self.session.get(url_ametice) as response:
             content = await response.read()
             soup = BeautifulSoup(bytes.decode(content), features="html.parser")
             data = soup.find_all("script")[1].string
@@ -146,8 +154,8 @@ class AmeticeBot(BaseBot):
                 1
             )
             dic_js_variable = json.loads(string_js_variable)
-            sesskey = dic_js_variable["sesskey"]
-            return sesskey
+            session_key = dic_js_variable["sesskey"]
+            return session_key
 
     async def post_for_table_courses_data(self) -> list[dict]:
         """Method to get the courses data related
@@ -273,21 +281,6 @@ class AmeticeBot(BaseBot):
 
         Returns None
         """
-        display_message("Connexion...", self.show_messages)
-        is_logged = await self.login()
-        if not is_logged:
-            display_message(
-                "Le mot de passe ou l'identifiant est incorrect.",
-                self.show_messages,
-                logging.ERROR,
-            )
-            return
-        display_message(
-            "Connecté et clé de session Ametice obtenue.", self.show_messages
-        )
-        display_message("Téléchargement des cours...", self.show_messages)
-        deb = time()
-
         table_courses = (await self.post_for_table_courses_data())["courses"]
         list_tasks_topics = []
         for dic_course in table_courses:
@@ -344,10 +337,6 @@ class AmeticeBot(BaseBot):
                 list_tasks_download_file.append(task_download_file)
 
         await asyncio.gather(*list_tasks_download_file)
-        display_message(
-            "Téléchargement terminé en" f" {round(time() - deb, 1)} secondes.",
-            self.show_messages,
-        )
 
 
 async def main():
@@ -363,6 +352,7 @@ async def main():
         trust_env=True,
     ) as session:
         bot = AmeticeBot(session, username, password, show_messages=True)
+        await bot.login()
         await bot.download_all_files()
 
 

@@ -1,5 +1,6 @@
 from datetime import datetime
-from math import trunc
+from math import trunc, log
+from entbot.constants import TUPLE_DIGITS_BASE64
 
 
 def get_beg_school_year(timestamp: int):
@@ -13,68 +14,27 @@ def get_beg_school_year(timestamp: int):
 
 
 def long_from_base64(value: str):
-    pos = 0
-    long_val = base64_value(ord(value[pos]))
-    pos += 1
-    length = len(value)
-    while pos < length:
-        long_val = long_val << 6
-        long_val += base64_value(ord(value[pos]))
-        pos += 1
-    return long_val
+    long_value = 0
+    nb_digits = len(value)
+    for i in range(0, nb_digits):
+        current_digit = value[i]
+        current_power = nb_digits - i - 1
+        long_value += (
+            TUPLE_DIGITS_BASE64.index(current_digit) * 64**current_power
+        )
+    return long_value
 
 
-def base64_value(digit: str):
-    if digit >= ord("A") and digit <= ord("Z"):
-        return digit - ord("A")
+def long_to_base64(value: int):
+    max_power = trunc(log(value, 64))
+    string_base64 = ""
+    for current_power in range(max_power, -1, -1):
+        index = value // 64**current_power
+        index = index if index <= 63 else 63
+        string_base64 += TUPLE_DIGITS_BASE64[index]
+        value -= index * 64**current_power
 
-    if digit >= ord("a"):
-        return digit - ord("a") + 26
-
-    if digit >= ord("0") and digit <= ord("9"):
-        return digit - ord("0") + 52
-    if digit == "$":
-        return 62
-
-    return 63
-
-
-def long_to_base64(value):
-    low = value & 0xFFFFFFFF
-    high = value >> 32
-    sb = []
-    have_non_zero = base64_append(sb, (high >> 28) & 0xF, False)
-    have_non_zero = base64_append(sb, (high >> 22) & 0x3F, have_non_zero)
-    have_non_zero = base64_append(sb, (high >> 16) & 0x3F, have_non_zero)
-    have_non_zero = base64_append(sb, (high >> 10) & 0x3F, have_non_zero)
-    have_non_zero = base64_append(sb, (high >> 4) & 0x3F, have_non_zero)
-    v = ((high & 0xF) << 2) | ((low >> 30) & 0x3)
-    have_non_zero = base64_append(sb, v, have_non_zero)
-    have_non_zero = base64_append(sb, (low >> 24) & 0x3F, have_non_zero)
-    have_non_zero = base64_append(sb, (low >> 18) & 0x3F, have_non_zero)
-    have_non_zero = base64_append(sb, (low >> 12) & 0x3F, have_non_zero)
-    base64_append(sb, (low >> 6) & 0x3F, have_non_zero)
-    base64_append(sb, low & 0x3F, True)
-    return "".join(sb)
-
-
-def base64_append(sb, digit, have_non_zero):
-    if digit > 0:
-        have_non_zero = True
-    if have_non_zero:
-        c = 0
-        if digit < 26:
-            c = ord("A") + digit
-        elif digit < 52:
-            c = ord("a") + digit - 26
-        elif digit < 62:
-            c = ord("0") + digit - 52
-        elif digit == 62:
-            c = ord("$")
-        else:
-            c = ord("_")
-        sb.append(chr(c))
-    return have_non_zero
+    return string_base64
 
 
 def get_beg_end_date():
@@ -94,7 +54,3 @@ def get_beg_end_date():
 
 def get_base64_from_datetime(datetime_object: datetime):
     return long_to_base64(trunc(datetime_object.timestamp() * 1e3))
-
-
-if __name__ == "__main__":
-    print(long_from_base64("YtynhhU"))

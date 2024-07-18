@@ -8,7 +8,7 @@ import os
 import aiohttp
 from bs4 import BeautifulSoup
 
-from entbot.bots.ent_bot import ENTBot
+from entbot.bots import ENTBot
 from entbot.constants import (
     RegexPatterns,
     Headers,
@@ -118,8 +118,16 @@ class AmeticeBot(ENTBot):
             - True if the operation succeeded.
             - False if the operation failed.
         """
+        display_message(
+            "Obtention de la clé de session Ametice...", self.show_messages
+        )
         self.session_key = await self.get_session_key(url_ametice)
-        return len(self.session_key) > 0
+        if len(self.session_key) > 0:
+            display_message(
+                "Clé de session Ametice obtenue.", self.show_messages
+            )
+            return True
+        return False
 
     async def login(self, login_url=URL.ENT_LOGIN):
         """Method to login with the credentials given in the class attributes.

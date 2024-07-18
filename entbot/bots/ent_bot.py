@@ -1,6 +1,6 @@
 import aiohttp
 from entbot.constants import Payload, URL
-import entbot.bots as bots
+from entbot import bots
 
 class ENTBot:
     """This class is a bot for AMU website.
@@ -49,7 +49,7 @@ class ENTBot:
         return self.is_logged_in_ent
 
     async def get_ametice_bot(self, url_ametice=URL.AMETICE) -> "bots.AmeticeBot":
-        ametice_bot = bots.AmeticeBot(self.session, self.username, self.password)
+        ametice_bot = bots.AmeticeBot(self.session, self.username, self.password, show_messages=True)
         if self.is_logged_in_ent:
             await ametice_bot.load_ametice_session(url_ametice)
         else:
@@ -58,7 +58,7 @@ class ENTBot:
 
     async def get_ade_bot(self, url_ade_login=URL.ADE_LOGIN) -> "bots.ADEBot":
 
-        ade_bot = bots.ADEBot(self.session, self.username, self.password)
+        ade_bot = bots.ADEBot(self.session, self.username, self.password, show_messages=True)
         if self.is_logged_in_ent:
             await ade_bot.login_ade(url_ade_login)
         else:

@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import pytest
 from typeguard import check_type
 from typing import List, Dict
-from entbot.bots.ametice_bot import AmeticeBot
+from entbot.bots import AmeticeBot
 from entbot.constants import Headers, Payload, URL
 
 load_dotenv()

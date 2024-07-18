@@ -46,10 +46,10 @@ def get_beg_end_date():
     else:
         beg_year = current_date.year - 1
 
-    beg_date_timestamp = datetime(beg_year, 9, 1)
-    end_date_timestamp = datetime(beg_year + 1, 9, 1)
+    beg_date = datetime(beg_year, 9, 1)
+    end_date = datetime(beg_year + 1, 9, 1)
 
-    return (beg_date_timestamp, end_date_timestamp)
+    return (beg_date, end_date)
 
 
 def get_base64_from_datetime(datetime_object: datetime):

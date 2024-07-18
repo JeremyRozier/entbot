@@ -4,7 +4,7 @@ import os
 import re
 from typing import List
 import aiohttp
-from entbot.bots.ent_bot import ENTBot
+from entbot.bots import ENTBot
 from entbot.constants import (
     URL,
     GWTPayload,
@@ -73,10 +73,8 @@ class ADEBot(ENTBot):
         if not self.is_logged_in_ent:
             if await super().login(login_url):
                 return await self.login_ade(url_ade_login)
-            else:
-                return False
-        else:
-            return await self.login_ade(url_ade_login)
+            return False
+        return await self.login_ade(url_ade_login)
 
     async def get_tree_from_name(self, name: str) -> List[str]:
         """Get the"""
@@ -90,12 +88,13 @@ class ADEBot(ENTBot):
         return list_courses_id_name
 
     async def get_semester_id(self, semester: int) -> str:
-        return (await self.get_tree_from_name(f"{semester} MPCI"))[-1]
+        return (await self.get_tree_from_name(f"S{semester} MPCI"))[-1]
 
     async def get_groups_from_semester(
-        self, semester_number: int
+        self,
+        semester_number: int,
+        semester_id: str,
     ) -> list[str]:
-        semester_id = await self.get_semester_id(semester_number)
         response_object = await self.session.post(
             URL.DIRECT_PLANNING,
             data=self.gwt_payload.children_from_semester(
@@ -104,16 +103,8 @@ class ADEBot(ENTBot):
             headers=Headers.GWT_HEADERS,
         )
         response = bytes.decode(await response_object.read())
-        list_courses_id_name = RegexPatterns.COURSE_ID_NAME.findall(response)
-        return list_courses_id_name
-
-    async def get_group_name_id(self, semester_number: int, group_number: int):
-        list_courses_id = await self.get_groups_from_semester(semester_number)
-        if len(list_courses_id) < group_number:
-            raise ValueError(
-                f"{group_number} group is not available in {semester_number}"
-            )
-        return list_courses_id[group_number]
+        list_groups_id_name = RegexPatterns.COURSE_ID_NAME.findall(response)
+        return list_groups_id_name
 
     async def get_timeline_url(
         self,

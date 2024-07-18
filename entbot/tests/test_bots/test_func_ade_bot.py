@@ -5,8 +5,7 @@ import os
 import aiohttp
 from dotenv import load_dotenv
 import pytest
-from entbot.bots import ENTBot
-from entbot.bots import ADEBot
+from entbot.bots import ENTBot, ADEBot
 from entbot.constants import Headers
 
 

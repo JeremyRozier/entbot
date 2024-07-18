@@ -4,9 +4,8 @@ import os
 import aiohttp
 from dotenv import load_dotenv
 import pytest
-from entbot.bots.ade_bot import ADEBot
+from entbot.bots import ADEBot, ENTBot
 from entbot.bots.ametice_bot import AmeticeBot
-from entbot.bots.ent_bot import ENTBot
 from entbot.constants import Headers
 
 load_dotenv()

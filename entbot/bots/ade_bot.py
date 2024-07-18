@@ -4,7 +4,7 @@ import os
 import re
 from typing import List
 import aiohttp
-from entbot.bots import ENTBot
+from entbot.bots.ent_bot import ENTBot
 from entbot.constants import (
     URL,
     GWTPayload,

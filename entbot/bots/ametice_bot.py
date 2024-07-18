@@ -8,7 +8,7 @@ import os
 import aiohttp
 from bs4 import BeautifulSoup
 
-from entbot.bots import ENTBot
+from entbot.bots.ent_bot import ENTBot
 from entbot.constants import (
     RegexPatterns,
     Headers,

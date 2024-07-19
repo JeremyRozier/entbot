@@ -18,6 +18,11 @@ from entbot.tools.timestamp_functions import (
 
 
 class ADEBot(ENTBot):
+    """This class is a bot for ADE website.
+    It is meant to request ADE API to get informations
+    about timetables such as their url.
+    """
+
     def __init__(
         self,
         session: aiohttp.ClientSession,

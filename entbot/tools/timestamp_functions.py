@@ -41,7 +41,7 @@ def get_beg_end_date():
     current_date = datetime.now()
     current_month = current_date.month
     beg_year = 0
-    if 10 <= current_month <= 12:
+    if 9 <= current_month <= 12:
         beg_year = current_date.year
     else:
         beg_year = current_date.year - 1

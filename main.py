@@ -1,5 +1,6 @@
 """File to execute to download all the files
-of an Ametice session"""
+from an Ametice session or to get timetables url from
+an ADE session."""
 
 import asyncio
 from getpass import getpass
@@ -108,8 +109,8 @@ async def main():
                     f"{str_choice} : {list_groups_id_name[index_choice][1]}\n"
                 )
 
-            group_choice = "default"
             print(prompt_group_choice)
+            group_choice = "default"
             while group_choice not in list_available_choices:
                 group_choice = input(
                     f"Choix de l'emploi du temps (0 à {list_available_choices[-1]}): "

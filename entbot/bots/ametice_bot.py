@@ -16,6 +16,8 @@ from entbot.constants import (
     Payload,
     URL,
     TUPLE_TREATED_MODULES,
+    MAX_DOWNLOAD_ATTEMPTS,
+    RETRY_DELAY_SECONDS,
 )
 from entbot.tools.dic_operations import get_classified_cm_id
 from entbot.tools.filename_parser import (
@@ -189,6 +191,8 @@ class AmeticeBot(ENTBot):
     ) -> None:
         """Encapsulates the download_file method with a try and catch block
         for avoiding the aiohttp.ClientConnectorError error which was occurring randomly.
+        Failed downloads are retried up to MAX_DOWNLOAD_ATTEMPTS times, with
+        a delay growing at each attempt, before the file is skipped.
         Files whose server presents an invalid TLS certificate are skipped:
         the certificate check is never disabled, as that would expose the
         session to man-in-the-middle attacks.
@@ -204,25 +208,28 @@ class AmeticeBot(ENTBot):
 
         Returns None
         """
-        has_error = True
-        while has_error:
+        for attempt in range(1, MAX_DOWNLOAD_ATTEMPTS + 1):
             try:
                 async with self.semaphore_requests:
                     await self.download_file(
                         cm_url, cm_module, folder_path, filename
                     )
+                break
             except aiohttp.ClientConnectorCertificateError:
                 display_message(
                     f"Skipped '{filename}': invalid TLS certificate for {cm_url}",
                     level=logging.WARNING,
                 )
                 break
-            except aiohttp.ClientConnectorError:
-                continue
-            except aiohttp.ClientPayloadError:
-                continue
-
-            has_error = False
+            except (aiohttp.ClientConnectorError, aiohttp.ClientPayloadError):
+                if attempt == MAX_DOWNLOAD_ATTEMPTS:
+                    display_message(
+                        f"Skipped '{filename}': download failed"
+                        f" after {MAX_DOWNLOAD_ATTEMPTS} attempts for {cm_url}",
+                        level=logging.WARNING,
+                    )
+                else:
+                    await asyncio.sleep(RETRY_DELAY_SECONDS * attempt)
 
         if self.show_messages:
             self.callback_download_file(course_id, course_name)

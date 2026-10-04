@@ -7,7 +7,7 @@ import pytest
 from typeguard import check_type
 from typing import List, Dict
 from entbot.bots import AmeticeBot
-from entbot.constants import Headers, Payload, URL
+from entbot.constants import Headers, Payload, URL, MAX_DOWNLOAD_ATTEMPTS
 
 load_dotenv()
 USERNAME = os.getenv("ENT_USERNAME")
@@ -131,3 +131,30 @@ async def test_callback_download_file():
         bot.dic_course_downloaded_cm["10010"] = 30
         bot.callback_download_file("10010", "TEST_COURSE_NAME")
         assert bot.dic_course_downloaded_cm["10010"] == 29
+
+
+@pytest.mark.asyncio
+async def test_download_file_gives_up_after_max_attempts(tmp_path, monkeypatch):
+    monkeypatch.setattr("entbot.bots.ametice_bot.RETRY_DELAY_SECONDS", 0)
+    async with aiohttp.ClientSession() as session:
+        bot = AmeticeBot(session, USERNAME, PASSWORD)
+        nb_calls = 0
+        download_file = bot.download_file
+
+        async def counting_download_file(*args):
+            nonlocal nb_calls
+            nb_calls += 1
+            await download_file(*args)
+
+        monkeypatch.setattr(bot, "download_file", counting_download_file)
+        # Nothing listens on port 9 (discard) locally: the connection is refused.
+        await bot.download_file_with_error_handling(
+            course_id="0",
+            course_name="test_course",
+            cm_url="https://127.0.0.1:9/",
+            cm_module="url",
+            folder_path=str(tmp_path),
+            filename="test_unreachable",
+        )
+        assert nb_calls == MAX_DOWNLOAD_ATTEMPTS
+        assert not any(tmp_path.iterdir())

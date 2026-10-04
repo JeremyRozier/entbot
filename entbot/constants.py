@@ -23,6 +23,8 @@ LIST_MODULES = [
     "forum",
 ]
 TUPLE_TREATED_MODULES = ["folder", "resource", "url", "quiz"]
+MAX_DOWNLOAD_ATTEMPTS = 5
+RETRY_DELAY_SECONDS = 1
 TIMESTAMP_ID = "Y8XbcIu"
 
 TUPLE_DIGITS_BASE64 = tuple(

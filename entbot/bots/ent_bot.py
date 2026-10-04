@@ -4,7 +4,7 @@ from entbot import bots
 
 
 class ENTBot:
-    """This class is a bot for AMU website.
+    """This class is a bot for the university website.
     It is meant to login to the ENT service so that
     it can be used in its subclasses to then access
     other services.
@@ -29,7 +29,7 @@ class ENTBot:
 
         Args:
             - login_url (str): The url of the service hosting Moodle.
-            The login page of Aix-Marseille Universités is the default url.
+            The university CAS login page is the default url.
 
         Returns (bool):
             - True if login succeeded.

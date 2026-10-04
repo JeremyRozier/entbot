@@ -84,5 +84,5 @@ def test_get_cm_folder_path():
     )
     assert (
         test_folder_path
-        == "Fichiers_Ametice/23-24/23-24_test_course_name/test_topic_name"
+        == "Ametice_Files/23-24/23-24_test_course_name/test_topic_name"
     )

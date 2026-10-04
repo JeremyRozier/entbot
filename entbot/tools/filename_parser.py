@@ -186,7 +186,7 @@ def get_cm_folder_path(
     Returns (str): The folder path for the given arguments.
     """
     folder_path = os.path.join(
-        "Fichiers_Ametice",
+        "Ametice_Files",
         get_valid_filename(school_year),
         get_valid_filename(course_name),
         get_valid_filename(topic_name),

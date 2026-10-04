@@ -69,7 +69,7 @@ class ADEBot(ENTBot):
 
         Args:
             - login_url (str): The url of the service hosting Moodle.
-            The login page of Aix-Marseille Universités is the default url.
+            The university CAS login page is the default url.
 
         Returns (bool):
             - True if login succeeded.
@@ -82,7 +82,14 @@ class ADEBot(ENTBot):
         return await self.login_ade(url_ade_login)
 
     async def get_tree_from_name(self, name: str) -> List[str]:
-        """Get the"""
+        """Searches the ADE resource tree for the given name.
+
+        Args:
+            - name (str): The name of the resource, for example "S5 MPCI".
+
+        Returns (List[str]): The ids of the nodes leading to the resource,
+        from the root of the tree to the resource itself.
+        """
         response_object = await self.session.post(
             URL.DIRECT_PLANNING,
             data=self.gwt_payload.tree_ids(name),
@@ -142,8 +149,8 @@ async def main():
     from dotenv import load_dotenv
 
     load_dotenv()
-    username = os.getenv("USERNAME")
-    password = os.getenv("PASSWORD")
+    username = os.getenv("ENT_USERNAME")
+    password = os.getenv("ENT_PASSWORD")
     async with aiohttp.ClientSession(
         headers=Headers.LOGIN_HEADERS,
         connector=aiohttp.TCPConnector(force_close=True),

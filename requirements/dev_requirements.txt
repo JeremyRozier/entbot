@@ -1,5 +1,8 @@
 typeguard >= 4.3.0
 pytest
+pytest-asyncio
+python-dotenv
+pyinstaller
 isort
 black
 flake8

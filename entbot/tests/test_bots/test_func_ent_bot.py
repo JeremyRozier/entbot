@@ -9,8 +9,8 @@ from entbot.bots.ametice_bot import AmeticeBot
 from entbot.constants import Headers
 
 load_dotenv()
-USERNAME = os.getenv("USERNAME")
-PASSWORD = os.getenv("PASSWORD")
+USERNAME = os.getenv("ENT_USERNAME")
+PASSWORD = os.getenv("ENT_PASSWORD")
 
 
 @pytest.mark.asyncio

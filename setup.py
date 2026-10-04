@@ -3,22 +3,21 @@ from setuptools import setup, find_packages
 setup(
     name="entbot",
     version="1.3.0",
-    description="Ent bot to automate tasks on an AMU college account",
+    description="Bot automating tasks on a university student portal (Moodle and ADE)",
     url="https://github.com/JeremyRozier/entbot",
-    author="Rozier Jérémy",
+    author="Jérémy Rozier",
     license="MIT",
     install_requires=[
         "aiohttp",
         "aiofiles",
         "beautifulsoup4",
-        "pytest-asyncio",
-        "pyinstaller",
-        "setuptools",
     ],
     extras_require={
         "dev": [
             "python-dotenv",
             "pytest",
+            "pytest-asyncio",
+            "pyinstaller",
             "isort",
             "black",
             "flake8",

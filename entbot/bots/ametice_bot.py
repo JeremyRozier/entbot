@@ -50,9 +50,9 @@ class AmeticeBot(ENTBot):
             - session (aiohttp.ClientSession): The aiohttp session which will be
             used throughout the whole lifetime of the bot.
 
-            - username (str): The username to sign in on the Aix Marseille website.
+            - username (str): The username to sign in on the university website.
 
-            - password (str): The password to sign in on the Aix Marseille website.
+            - password (str): The password to sign in on the university website.
 
             - show_messages (bool): Indicates whether logs are showed in the terminal or not.
             True : logs are showed.
@@ -67,7 +67,7 @@ class AmeticeBot(ENTBot):
         Returns: None
         """
         super().__init__(session, username, password, show_messages)
-        self.sephamore_requests = asyncio.Semaphore(max_concurrent_requests)
+        self.semaphore_requests = asyncio.Semaphore(max_concurrent_requests)
         self.dic_course_downloaded_cm = {}
         self.dic_course_school_year = {}
         self.session_key = ""
@@ -119,12 +119,12 @@ class AmeticeBot(ENTBot):
             - False if the operation failed.
         """
         display_message(
-            "Obtention de la clé de session Ametice...", self.show_messages
+            "Getting the Ametice session key...", self.show_messages
         )
         self.session_key = await self.get_session_key(url_ametice)
         if len(self.session_key) > 0:
             display_message(
-                "Clé de session Ametice obtenue.", self.show_messages
+                "Ametice session key obtained.", self.show_messages
             )
             return True
         return False
@@ -136,7 +136,7 @@ class AmeticeBot(ENTBot):
 
         Args:
             - login_url (str): The url of the service hosting Moodle.
-            The login page of Aix-Marseille Universités is the default url.
+            The university CAS login page is the default url.
 
         Returns (bool):
             - True if login succeeded.
@@ -206,7 +206,7 @@ class AmeticeBot(ENTBot):
         has_error = True
         while has_error:
             try:
-                async with self.sephamore_requests:
+                async with self.semaphore_requests:
                     await self.download_file(
                         cm_url, cm_module, folder_path, filename, ssl
                     )
@@ -279,7 +279,7 @@ class AmeticeBot(ENTBot):
         self.dic_course_downloaded_cm[course_id] -= 1
         if self.dic_course_downloaded_cm[course_id] == 0:
             display_message(
-                f"Le cours '{course_name}' a été téléchargé avec succès."
+                f"Course '{course_name}' successfully downloaded."
             )
 
     async def download_all_files(self) -> None:
@@ -351,8 +351,8 @@ async def main():
     from dotenv import load_dotenv
 
     load_dotenv()
-    username = os.getenv("USERNAME")
-    password = os.getenv("PASSWORD")
+    username = os.getenv("ENT_USERNAME")
+    password = os.getenv("ENT_PASSWORD")
     async with aiohttp.ClientSession(
         headers=Headers.LOGIN_HEADERS,
         connector=aiohttp.TCPConnector(force_close=True),

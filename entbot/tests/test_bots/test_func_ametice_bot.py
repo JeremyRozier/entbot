@@ -103,18 +103,20 @@ async def test_download_file():
         assert os.path.exists(f"{test_filename}.pdf")
         os.remove(f"{test_filename}.pdf")
 
-        # This last example illustrates the need to set ssl = False for some servers.
-        # This is handled in download_file_with_error_handling.
-        test_filename = "test_download_file"
-        await bot.download_file(
-            cm_url="https://math.univ-cotedazur.fr/~diener/L3MASS19/Cours3_19.pdf",
+
+@pytest.mark.asyncio
+async def test_download_file_skips_invalid_certificate(tmp_path):
+    async with aiohttp.ClientSession() as session:
+        bot = AmeticeBot(session, USERNAME, PASSWORD)
+        await bot.download_file_with_error_handling(
+            course_id="0",
+            course_name="test_course",
+            cm_url="https://expired.badssl.com/",
             cm_module="url",
-            folder_path=".",
-            filename=test_filename,
-            ssl=False,
+            folder_path=str(tmp_path),
+            filename="test_invalid_certificate",
         )
-        assert os.path.exists(f"{test_filename}.pdf")
-        os.remove(f"{test_filename}.pdf")
+        assert not any(tmp_path.iterdir())
 
 
 @pytest.mark.asyncio

@@ -4,6 +4,7 @@ in the class AmeticeBot.
 
 import asyncio
 import json
+import logging
 import os
 import aiohttp
 from bs4 import BeautifulSoup
@@ -185,10 +186,12 @@ class AmeticeBot(ENTBot):
         cm_module: str,
         folder_path: str,
         filename: str,
-        ssl=True,
     ) -> None:
         """Encapsulates the download_file method with a try and catch block
         for avoiding the aiohttp.ClientConnectorError error which was occurring randomly.
+        Files whose server presents an invalid TLS certificate are skipped:
+        the certificate check is never disabled, as that would expose the
+        session to man-in-the-middle attacks.
         This way the encapsulation is cleaner than if it were made directly
         in the download_file method.
 
@@ -198,8 +201,6 @@ class AmeticeBot(ENTBot):
             - cm_module (str): The type of the resource (see TUPLE_TREATED_TYPES).
             - folder_path (str): The path of folders where the file will be downloaded.
             - filename (str): The filename under which the file will be downloaded.
-            - ssl (bool): Indicates whether SSL is activated or not for the request
-            necessary to download the current file
 
         Returns None
         """
@@ -208,11 +209,14 @@ class AmeticeBot(ENTBot):
             try:
                 async with self.semaphore_requests:
                     await self.download_file(
-                        cm_url, cm_module, folder_path, filename, ssl
+                        cm_url, cm_module, folder_path, filename
                     )
             except aiohttp.ClientConnectorCertificateError:
-                ssl = False
-                continue
+                display_message(
+                    f"Skipped '{filename}': invalid TLS certificate for {cm_url}",
+                    level=logging.WARNING,
+                )
+                break
             except aiohttp.ClientConnectorError:
                 continue
             except aiohttp.ClientPayloadError:
@@ -224,7 +228,7 @@ class AmeticeBot(ENTBot):
             self.callback_download_file(course_id, course_name)
 
     async def download_file(
-        self, cm_url, cm_module, folder_path, filename, ssl=True
+        self, cm_url, cm_module, folder_path, filename
     ) -> None:
         """Downloads the file stored at the url : cm_url under a filename and
         in a specified location given in arguments.
@@ -234,12 +238,10 @@ class AmeticeBot(ENTBot):
             - cm_module (str): The type of the resource (see TUPLE_TREATED_TYPES).
             - folder_path (str): The path of folders where the file will be downloaded.
             - filename (str): The filename under which the file will be downloaded.
-            - ssl (bool): Indicates whether SSL is activated or not for the request
-            necessary to download the current file
 
         Returns None
         """
-        async with self.session.get(cm_url, ssl=ssl) as response:
+        async with self.session.get(cm_url) as response:
             file_url = str(response.url)
             file_content_type = response.content_type
             extension = get_file_extension(

@@ -39,7 +39,7 @@ class URL:
         "ametice.univ-amu.fr/login/index.php?authCAS=CAS"
     )
     DIRECT_PLANNING = "https://ade-web-consult.univ-amu.fr/direct/gwtdirectplanning/DirectPlanningServiceProxy"
-    ADE_LOGIN = "https://ident.univ-amu.fr/cas/login?service=http%3A%2F%2Fade-web-consult.univ-amu.fr%2Fdirect%2Fmyplanning.jsp"
+    ADE_LOGIN = "https://ident.univ-amu.fr/cas/login?service=https%3A%2F%2Fade-web-consult.univ-amu.fr%2Fdirect%2Fmyplanning.jsp"
     CORE_PLANNING = "https://ade-web-consult.univ-amu.fr/direct/gwtdirectplanning/CorePlanningServiceProxy"
     CONFIG = "https://ade-web-consult.univ-amu.fr/direct/gwtdirectplanning/ConfigurationServiceProxy"
     WEB_CLIENT = "https://ade-web-consult.univ-amu.fr/direct/gwtdirectplanning/WebClientServiceProxy"

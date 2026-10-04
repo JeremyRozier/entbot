@@ -45,7 +45,7 @@ class AmeticeBot(ENTBot):
         username: str,
         password: str,
         show_messages=False,
-        max_concurrent_requests=30,
+        max_concurrent_requests=10,
     ) -> None:
         """Constructor of AmeticeBot.
 
@@ -64,8 +64,9 @@ class AmeticeBot(ENTBot):
             - max_concurrent_requests (int): The number we pass in parameter of
             the class asyncio.Semaphore, that, in this program, is used to indicate
             how many requests, at most, can be made concurrently to avoid
-            unintentional DDOS attacks.
-            The default value, 30, is fine-tuned.
+            overloading the university's servers.
+            The default value, 10, keeps the load low while still
+            downloading files concurrently.
 
         Returns: None
         """

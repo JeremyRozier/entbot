@@ -13,7 +13,9 @@ None of these services offers a public API, so the bot replays the HTTP requests
 
 The bot works only with raw HTTP requests, without a headless browser. It uses [aiohttp](https://docs.aiohttp.org/) for asynchronous I/O.
 
-1. **Single sign-on (CAS)**: `ENTBot` posts the credentials to the university's CAS login form. The resulting session cookies are then shared with the other services.
+1. **Single sign-on (CAS)**: `ENTBot` loads the university's CAS login page, reads the hidden `execution` field, then posts it along with the credentials. The resulting session cookies are then shared with the other services.
+
+   > CAS keeps the state of the login flow on the client side, in the `execution` field, as a signed JWT. While building the bot I noticed that the same value could be reused across logins, as long as the server keys did not change. The bot still reads a fresh one for every login so that it does not depend on this behavior.
 2. **Moodle**: `AmeticeBot` extracts the `sesskey` from the dashboard page and calls Moodle's internal AJAX web services (`lib/ajax/service.php`) to list the courses and their content. It then downloads the files concurrently, with a semaphore that caps parallel requests at 10 so the server isn't flooded.
 3. **ADE**: the timetable app is a GWT application. `ADEBot` sends hand-built GWT-RPC payloads, reverse-engineered from the browser's network traffic. It walks the resource tree, lists the groups of a semester and requests the export URL. Dates are encoded in GWT's base64 `long` format, implemented in `tools/timestamp_functions.py`.
 

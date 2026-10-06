@@ -1,4 +1,5 @@
 import aiohttp
+from bs4 import BeautifulSoup
 from entbot.constants import Payload, URL
 from entbot import bots
 
@@ -23,6 +24,25 @@ class ENTBot:
         self.show_messages = show_messages
         self.is_logged_in_ent = False
 
+    async def get_execution_code(self, login_url=URL.ENT_LOGIN) -> str | None:
+        """Method to get the CAS "execution" value from the login form.
+        CAS stores the state of the login flow in this hidden field,
+        so it has to be read from a fresh login page before each login.
+
+        Args:
+            - login_url (str): The url of the CAS login page.
+
+        Returns (str | None): The execution value, or None if the
+        login form was not found.
+        """
+        async with self.session.get(login_url) as response:
+            content = await response.read()
+        soup = BeautifulSoup(bytes.decode(content), features="html.parser")
+        execution_input = soup.find("input", attrs={"name": "execution"})
+        if execution_input is None:
+            return None
+        return execution_input.get("value")
+
     async def login(self, login_url=URL.ENT_LOGIN) -> bool:
         """Method to login with the
         credentials given in the class attributes
@@ -35,8 +55,14 @@ class ENTBot:
             - True if login succeeded.
             - False if login failed.
         """
+        execution = await self.get_execution_code(login_url)
+        if execution is None:
+            self.is_logged_in_ent = False
+            return self.is_logged_in_ent
+
         async with self.session.post(
-            login_url, data=Payload.login(self.username, self.password)
+            login_url,
+            data=Payload.login(self.username, self.password, execution),
         ) as response:
             if (
                 response.status == 401
